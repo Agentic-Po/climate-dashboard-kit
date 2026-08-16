@@ -1,0 +1,2779 @@
+<!DOCTYPE html>
+<!--
+  PRE-FLIGHT CHECKLIST (Po — run 30 min before the audience arrives):
+  1. Open this page with #key=<TAB_ADMIN_KEY> in the URL (only needed if the worker
+     has TAB_ADMIN_KEY set; otherwise the + button works ungated).
+  2. Click "+" and create a throwaway canvas.
+  3. Confirm the "Canvas ready — ask me to build something." card renders on the
+     canvas — that proves primer + extractor + sandbox end-to-end.
+  4. Send one rehearsed chip prompt; wait for the render (30 s – a few minutes).
+  5. If the Mind ignored the [[CANVAS]] markers, the reply degrades to a text card.
+     Re-test and pin the chips to prompts that rehearsal PROVED produce canvas output.
+  6. Create 3–4 named canvases for the session if you want pre-provisioned tabs.
+  7. Hard-reload the page and confirm the tabs and their canvases persist.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="AI in Sustainability and Climate Change by Animoca Brands. Live Hong Kong Observatory data with Po's Minds Companion.">
+  <meta name="theme-color" content="#0b0d10">
+  <meta name="color-scheme" content="dark">
+  <!-- RELEASE-ID: kit-v1.1-f464219f -->
+<title>AI in Sustainability and Climate Change by Animoca Brands</title>
+  <style>
+    :root {
+      --bg:#0b0d10; --surface:#11151a; --surface-2:#161b22; --border:#1f242c;
+      --text:#e6e8eb; --muted:#9aa3ad; --accent-ai:#93b4ff; --rain:#4fc3f7;
+      --hot:#ff8a5c; --cool:#5cc8ff; --good:#4ade80; --warn:#fbbf24; --bad:#f87171;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin:0; padding:0; height:100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg); color: var(--text); line-height:1.45;
+      height:100vh; height:100dvh; overflow:hidden;
+      display:grid;
+      grid-template-rows:auto auto 1fr;
+      grid-template-columns:1fr 380px;
+      gap:10px 20px;
+      padding:16px 24px 20px;
+      -webkit-font-smoothing:antialiased;
+    }
+    .num { font-variant-numeric: tabular-nums; }
+    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+
+    /* ---------- Header ---------- */
+    #hdr {
+      grid-row:1; grid-column:1 / -1;
+      display:flex; align-items:flex-end; justify-content:space-between; gap:16px;
+      min-width:0;
+    }
+    #hdr > div:first-child { min-width:0; }
+    #hdr h1 { margin:0; font-size:26px; font-weight:700; line-height:1.2; color:#f4f6f8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    #hdr .sub { margin:2px 0 0; font-size:15px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .status-cluster { display:flex; align-items:center; gap:14px; flex:0 0 auto; font-size:14px; color:var(--muted); white-space:nowrap; padding-bottom:4px; }
+    body.canvas-mode .hko-only { display:none; }
+    body.canvas-mode #stage { display:none; } /* template stage hidden in canvas mode even if its instance was never created (direct load into a canvas tab) */
+    .pill {
+      display:inline-flex; align-items:center; gap:7px;
+      padding:5px 12px; border-radius:999px; border:1px solid var(--border);
+      background:var(--surface-2); font-size:14px; font-weight:700; letter-spacing:.05em;
+    }
+    .pill .dot { width:9px; height:9px; border-radius:50%; background:var(--muted); }
+    .pill.live { color:var(--good); } .pill.live .dot { background:var(--good); }
+    .pill.stale, .pill.sample { color:var(--warn); } .pill.stale .dot, .pill.sample .dot { background:var(--warn); }
+    .pill.offline { color:var(--bad); } .pill.offline .dot { background:var(--bad); }
+    .pill.connecting { color:var(--muted); } .pill.connecting .dot { background:var(--muted); }
+    .pill .dot.busy { animation:pulse 1.2s infinite ease-in-out; }
+    @keyframes pulse { 0%,100%{opacity:.35;} 50%{opacity:1;} }
+    #refresh-now {
+      padding:6px 14px; min-height:34px; border-radius:8px; border:1px solid #2a313a;
+      background:var(--surface-2); color:var(--text); font:inherit; font-size:14px; font-weight:600; cursor:pointer;
+    }
+    #refresh-now:hover { border-color:var(--accent-ai); color:var(--accent-ai); }
+
+    /* ---------- Tab strip ---------- */
+    #tabbar {
+      grid-row:2; grid-column:1 / -1;
+      display:flex; align-items:flex-end; gap:6px; height:44px; min-width:0;
+      border-bottom:1px solid var(--border); position:relative;
+    }
+    #tabscroll {
+      display:flex; align-items:flex-end; gap:6px; overflow-x:auto; overflow-y:hidden;
+      scrollbar-width:none; min-width:0; flex:1 1 auto;
+    }
+    /* fade mask only while there is hidden content to the right, so the inline + never sits dimmed */
+    #tabscroll.overflow-right {
+      -webkit-mask-image:linear-gradient(90deg, #000 0, #000 calc(100% - 32px), transparent 100%);
+              mask-image:linear-gradient(90deg, #000 0, #000 calc(100% - 32px), transparent 100%);
+    }
+    #tabscroll::-webkit-scrollbar { display:none; }
+    .tabbtn {
+      flex:0 0 auto; min-width:120px; max-width:220px; height:38px;
+      display:inline-flex; align-items:center; gap:8px; padding:0 14px;
+      font:inherit; font-size:15px; font-weight:600; color:var(--muted);
+      background:transparent; border:1px solid transparent; border-bottom:none;
+      border-radius:8px 8px 0 0; cursor:pointer; white-space:nowrap; position:relative;
+    }
+    .tabbtn .tlabel { overflow:hidden; text-overflow:ellipsis; min-width:0; }
+    .tabbtn:hover { color:var(--text); background:var(--surface); }
+    .tabbtn.active {
+      color:var(--text); background:var(--surface-2);
+      border-color:var(--border);
+      box-shadow:inset 0 -2px 0 var(--accent-ai);
+    }
+    .tabbtn .livedot { width:8px; height:8px; border-radius:50%; background:var(--good); flex:0 0 auto; }
+    .tabbtn .unread {
+      width:9px; height:9px; border-radius:50%; background:var(--accent-ai); flex:0 0 auto;
+      display:none;
+    }
+    .tabbtn.has-unread .unread { display:inline-block; }
+    .tabbtn.pulse { animation:tabpulse .3s ease 1; }
+    @keyframes tabpulse { 0%{transform:translateY(0);} 50%{transform:translateY(-3px);} 100%{transform:translateY(0);} }
+    .tabbtn.creating { color:var(--muted); font-style:italic; }
+    .tabbtn.failed { color:var(--warn); }
+    #newtab {
+      flex:0 0 auto; width:44px; height:38px; margin-left:4px; order:9999; /* always the last flex item in the scroller */
+      font:inherit; font-size:22px; font-weight:600; line-height:1; color:var(--accent-ai);
+      background:var(--surface); border:1px solid var(--border); border-bottom:none;
+      border-radius:8px 8px 0 0; cursor:pointer;
+    }
+    #newtab:hover { border-color:var(--accent-ai); }
+    #newtab:disabled { opacity:.5; cursor:not-allowed; }
+
+    /* ---------- Left column (Tab 1 stage) ---------- */
+    #stage {
+      grid-row:3; grid-column:1;
+      display:grid; min-height:0; min-width:0;
+      grid-template-rows:auto 1.45fr 0.85fr;
+      gap:12px;
+    }
+    .card {
+      background:var(--surface); border:1px solid var(--border); border-radius:14px;
+      padding:10px 16px; min-height:0; min-width:0; overflow:hidden;
+      display:flex; flex-direction:column;
+    }
+    .card h2 { margin:0 0 6px; font-size:17px; font-weight:600; color:#dfe3e8; flex:0 0 auto; }
+    .label { font-size:14px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:600; }
+
+    #tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+    .tile {
+      background:var(--surface); border:1px solid var(--border); border-radius:14px;
+      padding:12px 16px; min-height:92px; min-width:0;
+      display:flex; flex-direction:column; justify-content:space-between;
+      transition:background .6s ease;
+    }
+    .tile.flash { background:#182236; transition:none; }
+    .tile .val { font-size:40px; font-weight:700; line-height:1.05; transition:opacity .2s ease; }
+    .tile .val.fading { opacity:0; }
+    .tile .subline { font-size:16px; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .tile.hot .val { color:var(--hot); } .tile.cool .val { color:var(--cool); }
+    .tile.rain .val { color:var(--rain); }
+
+    #charts { display:grid; grid-template-columns:1.2fr 1fr; gap:14px; min-height:0; }
+    .chart-scroll { flex:1 1 auto; min-height:0; overflow:hidden; display:flex; flex-direction:column; }
+    .hrows { display:flex; flex-direction:column; gap:2px; flex:1 1 auto; min-height:0; justify-content:flex-start; overflow:hidden; }
+    .hrow { display:flex; align-items:center; gap:10px; min-height:18px; flex:0 1 24px; }
+    .hrow .hlabel { flex:0 0 172px; text-align:right; font-size:15.5px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .hrow .htrack { flex:1 1 auto; align-self:stretch; max-height:24px; min-height:16px; position:relative; border-left:1px solid #2a313a; }
+    .hrow .hfill { position:absolute; left:0; top:10%; bottom:10%; border-radius:0 6px 6px 0; min-width:3px; }
+    .hrow .hmed { position:absolute; top:-4px; bottom:-4px; width:0; border-left:1px dashed #9aa3ad; opacity:.55; }
+    .hrow .hval { flex:0 0 66px; font-size:15.5px; font-weight:600; color:var(--text); }
+    .hdiv { text-align:center; color:#6b7480; font-size:13px; font-style:italic; flex:0 0 auto; padding-left:120px; }
+    .chart-note { flex:0 0 auto; font-size:13px; color:var(--muted); margin-top:4px; padding-left:182px; }
+    .chart-empty {
+      flex:1; display:flex; align-items:center; justify-content:center; text-align:center;
+      color:var(--muted); font-size:17px; padding:12px 20px;
+    }
+
+    #bottom { display:grid; grid-template-columns:1fr 1fr; gap:14px; min-height:0; }
+    #insights ul { margin:0; padding:0 0 0 18px; display:flex; flex-direction:column; gap:5px; overflow:hidden; }
+    #insights ul { overflow-y:auto; }
+    #insights li { font-size:15px; line-height:1.3; }
+    #insights li::marker { color:var(--accent-ai); }
+
+    #pipe-flow { display:flex; align-items:center; gap:6px; margin:0 0 8px; flex:0 0 auto; }
+    .pnode {
+      flex:1; text-align:center; font-size:12.5px; font-weight:600; color:var(--accent-ai);
+      border:1px solid #2b3a5e; background:#131a28; border-radius:8px; padding:3px 4px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;
+    }
+    .parrow { color:var(--accent-ai); font-size:14px; flex:0 0 auto; }
+    .tbar-row { display:flex; align-items:center; gap:10px; margin-bottom:5px; font-size:14px; }
+    .tbar-label { flex:0 0 108px; color:var(--muted); white-space:nowrap; }
+    .tbar-track { flex:1; height:12px; background:var(--surface-2); border-radius:6px; position:relative; overflow:hidden; }
+    .tbar-fill { position:absolute; left:0; top:0; bottom:0; border-radius:6px; background:var(--accent-ai); min-width:2px; }
+    .tbar-tick { position:absolute; top:-2px; bottom:-2px; width:1px; background:#3a4351; }
+    .tbar-val { flex:0 0 74px; text-align:right; color:var(--text); }
+    #bottom .card { padding:12px 16px 10px; }
+    #pipe-line { font-size:14px; color:var(--text); margin:3px 0 2px; }
+    #pipe-fresh { font-size:13px; color:var(--muted); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+    .banner {
+      position:fixed; bottom:14px; left:50%; transform:translateX(-50%); max-width:min(90vw,640px); text-align:center;
+      background:#2b2413; color:var(--warn); border:1px solid #4a3d16;
+      padding:6px 16px; border-radius:8px; font-size:14px; font-weight:600; z-index:20;
+    }
+    .banner[hidden] { display:none; }
+
+    .skel { background:linear-gradient(90deg,var(--surface-2) 25%, #1b212a 50%, var(--surface-2) 75%); background-size:200% 100%; animation:shim 1.4s infinite; border-radius:8px; color:transparent !important; }
+    @keyframes shim { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
+
+    /* ---------- Canvas stages ---------- */
+    .canvas-stage {
+      grid-row:3; grid-column:1;
+      display:flex; flex-direction:column; min-height:0; min-width:0; gap:8px;
+    }
+    .canvas-stage[hidden], #stage[hidden] { display:none; }
+    .canvas-title {
+      flex:0 0 auto; font-size:1.45rem; font-weight:700; color:var(--text);
+      line-height:1.25; padding:0 2px; overflow-wrap:anywhere;
+    }
+    .canvas-title:empty { display:none; }
+    .canvas-caption {
+      flex:0 0 auto; display:flex; align-items:center; gap:10px;
+      font-size:14px; color:var(--muted); padding:0 2px; min-height:20px;
+    }
+    .canvas-caption .who { color:var(--accent-ai); font-weight:600; }
+    .canvas-frame-wrap { flex:1 1 auto; min-height:0; position:relative; }
+    .canvas-frame {
+      width:100%; height:100%; border:1px solid var(--border); border-radius:14px;
+      background:var(--bg); display:block;
+    }
+    .canvas-frame.reveal { animation:canvasfade .3s ease 1; }
+    @keyframes canvasfade { from{opacity:0;} to{opacity:1;} }
+    .canvas-overlay {
+      position:absolute; inset:0; border-radius:14px; background:var(--surface);
+      border:1px solid var(--border);
+      display:flex; align-items:center; justify-content:center; text-align:center;
+      padding:24px; overflow:auto;
+    }
+    .canvas-overlay[hidden] { display:none; }
+    .canvas-buildstrip {
+      display:flex; align-items:center; gap:10px; margin:0 0 8px;
+      padding:8px 14px; border:1px solid var(--border); border-radius:10px;
+      background:var(--surface-2); color:var(--muted); font-size:15px;
+    }
+    .canvas-buildstrip .num { font-variant-numeric:tabular-nums; color:var(--text); }
+    .canvas-buildstrip[hidden] { display:none; }
+    .canvas-empty-inner { max-width:640px; margin:0 auto; }
+    .canvas-empty-inner svg { width:64px; height:64px; margin-bottom:12px; }
+    .canvas-empty-inner h2 { margin:0 0 8px; font-size:24px; font-weight:700; color:#f4f6f8; }
+    .canvas-empty-inner .sub { margin:0 0 6px; font-size:16px; color:var(--muted); }
+    .canvas-empty-inner .fine { margin:0; font-size:13px; color:#6b7480; }
+    .canvas-building-inner { width:min(560px, 90%); text-align:left; }
+    .canvas-building-inner .ghost { height:56px; margin-bottom:14px; }
+    .canvas-building-inner .bline { font-size:17px; color:var(--text); margin:4px 0 0; display:flex; align-items:center; gap:10px; }
+    .canvas-building-inner .bsub { font-size:14px; color:var(--muted); margin:6px 0 0; }
+    .canvas-textcard {
+      max-width:720px; margin:0 auto; text-align:left;
+      background:var(--surface-2); border:1px solid var(--border); border-radius:14px;
+      padding:20px 24px; font-size:18px; line-height:1.5; max-height:100%; overflow-y:auto;
+    }
+    .canvas-textcard .tc-cap { font-size:13px; color:var(--muted); margin-top:12px; }
+
+    /* ---------- Chat panel(s) ---------- */
+    #chatcol {
+      grid-row:3; grid-column:2; min-height:0; min-width:0; position:relative;
+    }
+    .chat-panel {
+      position:absolute; inset:0;
+      background:var(--surface); border:1px solid var(--border); border-radius:16px;
+      display:flex; flex-direction:column; min-height:0; overflow:hidden;
+    }
+    .chat-panel[hidden] { display:none; }
+    .ch-head { flex:0 0 auto; padding:14px 16px 10px; border-bottom:1px solid var(--border); }
+    .ch-head h2 { margin:0; font-size:17px; font-weight:700; display:flex; align-items:center; gap:8px; }
+    .ch-head h2 .dot { width:8px; height:8px; border-radius:50%; background:var(--good); flex:0 0 auto; }
+    .ch-head .cap { margin:4px 0 0; font-size:13px; color:var(--muted); }
+    .ch-history {
+      flex:1 1 auto; overflow-y:auto; overflow-x:hidden;
+      padding:12px 14px; display:flex; flex-direction:column; gap:10px; min-height:0;
+      scroll-behavior:smooth; -webkit-overflow-scrolling:touch;
+    }
+    .empty-state {
+      margin:1.5rem auto; text-align:center; color:#7a838d; font-size:14px;
+      padding:1.25rem 1rem; border:1px dashed #20252c; border-radius:12px; background:var(--surface-2); max-width:300px;
+    }
+    .message { max-width:92%; padding:.6rem .8rem; border-radius:12px; background:var(--surface-2); border:1px solid var(--border); word-wrap:break-word; overflow-wrap:anywhere; }
+    .message.companion { align-self:flex-start; background:#182236; border-color:#243358; }
+    .message.visitor { align-self:flex-end; background:#1c2a1f; border-color:#2c4232; }
+    .message .meta { display:flex; justify-content:space-between; align-items:baseline; gap:.75rem; margin-bottom:.25rem; font-size:.7rem; }
+    .message .sender { font-weight:600; color:#c7cdd4; }
+    .message.companion .sender { color:var(--accent-ai); }
+    .message.visitor .sender { color:#9ad9a8; }
+    .message .time { color:#6b7480; font-size:.68rem; font-variant-numeric:tabular-nums; white-space:nowrap; }
+    .message .body { font-size:.92rem; max-height:40vh; overflow-y:auto; }
+    .message .body p { margin:0 0 .5rem; } .message .body p:last-child { margin-bottom:0; }
+    .message .body a { color:var(--accent-ai); text-decoration:underline; text-underline-offset:2px; }
+    .message .body code { background:#0e1116; padding:.1rem .35rem; border-radius:4px; font-size:.9em; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .message .body ul, .message .body ol { margin:0 0 .5rem 1.25rem; padding:0; }
+    .message .body strong { color:#f4f6f8; }
+    .ch-thinking { flex:0 0 auto; display:flex; align-items:center; gap:.5rem; padding:.35rem 1rem; color:var(--muted); font-size:.82rem; font-style:italic; }
+    .ch-thinking[hidden] { display:none; }
+    .thinking-note { flex:0 0 auto; font-size:.75rem; color:#7a838d; font-style:italic; text-align:center; margin:0 0 .2rem; padding:0 .75rem; }
+    .thinking-note[hidden] { display:none; }
+    .thinking-dots { display:inline-flex; align-items:center; gap:3px; }
+    .thinking-dots span { display:inline-block; width:5px; height:5px; border-radius:50%; background:var(--muted); animation:thinking-pulse 1.4s infinite ease-in-out; }
+    .thinking-dots span:nth-child(2) { animation-delay:.2s; }
+    .thinking-dots span:nth-child(3) { animation-delay:.4s; }
+    @keyframes thinking-pulse { 0%,60%,100%{opacity:.3; transform:translateY(0);} 30%{opacity:1; transform:translateY(-2px);} }
+    .ch-status { flex:0 0 auto; min-height:1.1rem; font-size:.8rem; padding:0 1rem; }
+    .ch-status:empty { display:none; }
+    .ch-status.error { color:var(--bad); } .ch-status.success { color:var(--good); } .ch-status.info { color:var(--muted); }
+    .ch-chips { flex:0 0 auto; display:flex; flex-wrap:wrap; gap:6px; padding:6px 12px 4px; }
+    .ch-chips[hidden] { display:none; }
+    .chip {
+      font:inherit; font-size:12.5px; color:var(--accent-ai); background:#131a28;
+      border:1px solid #2b3a5e; border-radius:999px; padding:6px 11px; cursor:pointer; text-align:left;
+      min-height:32px;
+    }
+    .chip:hover { border-color:var(--accent-ai); }
+    .chip:disabled { opacity:.5; cursor:not-allowed; }
+    .ch-composer { flex:0 0 auto; border-top:1px solid var(--border); padding:10px 12px 12px; }
+    .composer-row { display:flex; gap:8px; align-items:flex-end; }
+    .ch-input {
+      flex:1 1 auto; min-height:44px; max-height:120px; padding:.6rem .75rem;
+      background:var(--surface-2); color:var(--text); border:1px solid #2a313a; border-radius:10px;
+      font:inherit; font-size:.92rem; line-height:1.4; resize:none; outline:none;
+      transition:border-color .15s ease, box-shadow .15s ease;
+    }
+    .ch-input:focus { border-color:#4f6bff; box-shadow:0 0 0 3px rgba(79,107,255,.2); }
+    .ch-input:disabled { opacity:.6; cursor:not-allowed; }
+    .ch-input::placeholder { color:#6b7480; }
+    .composer-meta { display:flex; justify-content:flex-end; margin-top:.3rem; font-size:.72rem; color:#7a838d; }
+    .ch-count { font-variant-numeric:tabular-nums; }
+    .ch-count.over { color:var(--bad); font-weight:600; }
+    .ch-send {
+      padding:.6rem 1.1rem; background:#4f6bff; color:#fff; border:1px solid #4f6bff; border-radius:10px;
+      font:inherit; font-size:.92rem; font-weight:600; cursor:pointer; min-height:44px; min-width:72px; flex:0 0 auto;
+    }
+    .ch-send:hover:not(:disabled) { background:#3d59e6; }
+    .ch-send:focus { outline:none; box-shadow:0 0 0 3px rgba(79,107,255,.4); }
+    .ch-send:disabled { opacity:.5; cursor:not-allowed; }
+
+    @media (max-width: 900px) {
+      body { grid-template-columns:1fr; grid-template-rows:auto auto auto auto; overflow:auto; height:auto; }
+      #hdr { grid-column:1; flex-wrap:wrap; }
+      #tabbar { grid-column:1; }
+      #stage, .canvas-stage { grid-row:3; grid-column:1; }
+      .canvas-stage { min-height:60vh; }
+      #chatcol { grid-row:4; grid-column:1; height:70vh; position:relative; }
+      #tiles { grid-template-columns:repeat(2,1fr); }
+      #charts, #bottom { grid-template-columns:1fr; }
+    }
+    /* ---------- BYOD (Build Your Own) — additive ---------- */
+    #byod-cta { padding:6px 14px; min-height:34px; border-radius:999px; border:1px solid var(--accent-ai); background:transparent; color:var(--accent-ai); font:inherit; font-size:14px; font-weight:700; cursor:pointer; white-space:nowrap; }
+    #byod-cta:hover { background:var(--accent-ai); color:#0b0d10; }
+    #byod-overlay { position:fixed; inset:0; background:rgba(4,6,9,.72); z-index:60; display:flex; align-items:flex-start; justify-content:center; padding:28px 20px; overflow:auto; }
+    #byod-overlay[hidden] { display:none; }
+    .byod-modal { background:var(--surface); border:1px solid var(--border); border-radius:14px; max-width:660px; width:100%; padding:22px 24px 18px; }
+    .byod-modal h2 { margin:0 0 4px; font-size:20px; }
+    .byod-modal h3 { margin:16px 0 6px; font-size:15px; }
+    .byod-step[hidden] { display:none; }
+    .byod-close { float:right; background:none; border:none; color:var(--muted); font-size:20px; cursor:pointer; line-height:1; }
+    .byod-close:hover { color:var(--text); }
+    .byod-modal a { color:var(--accent-ai); }
+    .byod-note { font-size:13px; color:var(--muted); }
+    .byod-disclose { font-size:13px; color:var(--muted); border-left:3px solid var(--border); padding-left:10px; margin:8px 0; }
+    .byod-trust { border:1px solid var(--border); background:var(--surface-2); border-radius:10px; padding:12px 14px; font-size:13.5px; line-height:1.55; margin:10px 0; }
+    .byod-trust p { margin:8px 0; }
+    #byod-key { width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--text); font:inherit; }
+    .byod-err { color:var(--bad); font-size:13px; min-height:18px; margin:6px 0 0; }
+    .byod-check { display:flex; gap:8px; align-items:flex-start; font-size:13.5px; margin:10px 0; }
+    .byod-check input { margin-top:2px; flex:0 0 auto; }
+    .byod-actions { display:flex; gap:10px; align-items:center; margin-top:14px; flex-wrap:wrap; }
+    .byod-btn { padding:8px 16px; border-radius:8px; border:1px solid var(--accent-ai); background:var(--accent-ai); color:#0b0d10; font:inherit; font-weight:700; cursor:pointer; }
+    .byod-btn.secondary { background:transparent; color:var(--accent-ai); }
+    .byod-btn:disabled { opacity:.5; cursor:not-allowed; }
+    .byod-minds { display:flex; flex-direction:column; gap:10px; margin:12px 0; }
+    .byod-mindcard { display:flex; align-items:center; justify-content:space-between; gap:12px; border:1px solid var(--border); background:var(--surface-2); border-radius:10px; padding:12px 14px; }
+    .byod-mindcard .mname { font-weight:700; }
+    .byod-mindcard .bal { color:var(--muted); font-size:13px; }
+    .byod-footer { margin:16px 0 0; font-size:12px; color:var(--muted); }
+    .byod-ownerbar { display:flex; flex-wrap:wrap; align-items:center; gap:10px; border:1px solid var(--border); background:var(--surface-2); border-radius:10px; padding:8px 12px; margin-bottom:10px; font-size:13.5px; }
+    .byod-ownerbar .hs.pass { color:var(--good); } .byod-ownerbar .hs.soft { color:var(--warn); } .byod-ownerbar .hs.checking { color:var(--muted); }
+    .byod-ownerbar .spacer { flex:1; }
+    .byod-ownerbar button { padding:5px 10px; border-radius:8px; border:1px solid #2a313a; background:var(--surface); color:var(--text); font:inherit; font-size:13px; cursor:pointer; }
+    .byod-ownerbar button:hover { border-color:var(--accent-ai); color:var(--accent-ai); }
+    #byod-toast { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:10px 16px; font-size:13.5px; z-index:70; max-width:560px; }
+    #byod-toast[hidden] { display:none; }
+    .byod-slugrow { display:flex; align-items:center; gap:6px; margin:6px 0 2px; }
+    .byod-slugbase { color:var(--muted); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:15px; }
+    #byod-slug { flex:1; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--text); font:inherit; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .byod-slug-status { font-size:13px; min-height:18px; margin:4px 0 0; color:var(--muted); }
+    .byod-slug-status.ok { color:var(--good); }
+    .byod-slug-status.bad { color:var(--bad); }
+    .byod-publicbanner { border:1px solid #5a1f1f; background:#2a1214; color:#ffb4b4; border-radius:10px; padding:6px 12px; margin-bottom:8px; font-size:13.5px; font-weight:700; }
+    .byod-publicbanner[hidden] { display:none; }
+    .byod-ownerbar .snapchip { font-size:12.5px; color:var(--muted); }
+    .byod-ownerbar .snapchip.warn { color:var(--warn); font-weight:600; }
+    .byod-ownerbar .slug { color:var(--accent-ai); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12.5px; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important; }
+      .tile.flash { background:var(--surface); }
+    }
+  </style>
+</head>
+<body>
+  <div id="fallback-banner" class="banner" hidden></div>
+
+  <header id="hdr">
+    <div>
+      <h1>AI in Sustainability and Climate Change</h1>
+      <p class="sub">by Animoca Brands &middot; 香港天文台實時數據 (Live Hong Kong Observatory data)</p>
+    </div>
+    <div class="status-cluster">
+      <span id="pill" class="pill connecting"><span class="dot"></span><span id="pill-text">CONNECTING</span></span>
+      <span id="hko-updated" class="num hko-only">HKO updated —</span>
+      <span id="fetched-ago" class="num hko-only">fetched —</span>
+      <span id="next-refresh" class="num hko-only">refresh in —</span>
+      <button id="refresh-now" class="hko-only" type="button">Refresh now</button>
+      <button id="byod-cta" type="button">Build Your Own Now!</button>
+    </div>
+  </header>
+
+  <nav id="tabbar" aria-label="Dashboard tabs">
+    <div id="tabscroll" role="tablist"><button id="newtab" type="button" title="New canvas" aria-label="New canvas">+</button></div>
+  </nav>
+
+  <div id="stage">
+    <div id="tiles">
+      <div class="tile hot" id="tile-hot">
+        <span class="label">Hottest station</span>
+        <div><div class="val num skel">—</div><div class="subline">&nbsp;</div></div>
+      </div>
+      <div class="tile cool" id="tile-cool">
+        <span class="label">Coolest station</span>
+        <div><div class="val num skel">—</div><div class="subline">&nbsp;</div></div>
+      </div>
+      <div class="tile" id="tile-spread">
+        <span class="label">Spread</span>
+        <div><div class="val num skel">—</div><div class="subline">hottest &minus; coolest</div></div>
+      </div>
+      <div class="tile rain" id="tile-rain">
+        <span class="label">Wettest district</span>
+        <div><div class="val num skel">—</div><div class="subline">&nbsp;</div></div>
+      </div>
+    </div>
+
+    <div id="charts">
+      <section class="card" aria-label="Temperature by station">
+        <h2>Temperature by station &middot; 各區氣溫</h2>
+        <div class="chart-scroll" id="temp-chart"><div class="chart-empty">Loading observatory data&hellip;</div></div>
+      </section>
+      <section class="card" aria-label="Rainfall by district">
+        <h2>Rainfall (past hour) &middot; 各區雨量</h2>
+        <div class="chart-scroll" id="rain-chart"><div class="chart-empty">Loading observatory data&hellip;</div></div>
+      </section>
+    </div>
+
+    <div id="bottom">
+      <section class="card" id="insights" aria-label="AI insights" aria-live="polite">
+        <h2>What the data says &middot; AI insights</h2>
+        <ul id="insights-list"><li class="skel">Waiting for observatory data…</li></ul>
+      </section>
+      <section class="card" id="pipeline" aria-label="AI data pipeline performance">
+        <h2>How the AI got this data &middot; Pipeline</h2>
+        <div id="pipe-flow">
+          <div class="pnode">HKO 天文台</div><span class="parrow">&#10142;</span>
+          <div class="pnode">Minds Worker</div><span class="parrow">&#10142;</span>
+          <div class="pnode">This page</div><span class="parrow">&#10142;</span>
+          <div class="pnode">Screen</div>
+        </div>
+        <div id="pipe-bars">
+          <div class="tbar-row"><span class="tbar-label">Weather fetch</span><div class="tbar-track" title="tick = 500 ms (fast) · scale 0–2000 ms"><div class="tbar-tick" style="left:25%"></div><div class="tbar-fill" id="bar-weather" style="width:0"></div></div><span class="tbar-val num" id="val-weather">—</span></div>
+          <div class="tbar-row"><span class="tbar-label">Rainfall fetch</span><div class="tbar-track"><div class="tbar-tick" style="left:25%"></div><div class="tbar-fill" id="bar-rain" style="width:0"></div></div><span class="tbar-val num" id="val-rain">—</span></div>
+          <div class="tbar-row"><span class="tbar-label">Browser round-trip</span><div class="tbar-track"><div class="tbar-tick" style="left:25%"></div><div class="tbar-fill" id="bar-rt" style="width:0"></div></div><span class="tbar-val num" id="val-rt">—</span></div>
+        </div>
+        <p id="pipe-line" class="skel">Measuring pipeline speed&hellip;</p>
+        <p id="pipe-fresh" class="num">&nbsp;</p>
+      </section>
+    </div>
+  </div>
+
+  <div id="chatcol" aria-label="Chat with Po's Minds Companion"></div>
+
+  <!-- ============ BYOD wizard (additive; hidden until opened) ============ -->
+  <div id="byod-overlay" hidden>
+    <div class="byod-modal" role="dialog" aria-modal="true" aria-label="Build your own climate dashboard">
+      <button class="byod-close" id="byod-close" type="button" aria-label="Close">&times;</button>
+
+      <!-- Step 1 — prerequisites -->
+      <section class="byod-step" id="byod-step1">
+        <h2>Build Your Own Climate Dashboard</h2>
+        <p class="byod-note">Attach one of <em>your own</em> Minds to this dashboard. Your Mind powers the chat and the canvas — your conversation, your cognition, your build.</p>
+        <h3>1 &middot; Get a Minds account</h3>
+        <p><a id="byod-join" href="#" target="_blank" rel="noopener noreferrer">Join Minds &rarr;</a></p>
+        <div class="byod-disclose">Signing up through this link credits <strong>pochu1215</strong> as your referrer. It costs you nothing and doesn't change your account. <a href="https://hellominds.ai/join" target="_blank" rel="noopener noreferrer">Sign up without a referral &rarr;</a></div>
+        <h3>2 &middot; Unlock Builder Access &amp; create a key</h3>
+        <p><a id="byod-docs" href="#" target="_blank" rel="noopener noreferrer">Unlock Builder Access — docs &rarr;</a></p>
+        <p class="byod-note">Tip: name the key <strong>climate-dashboard</strong> and set a <strong>30-day expiry</strong>.</p>
+        <div class="byod-actions">
+          <button class="byod-btn" id="byod-tostep2" type="button">I have a builder key &rarr;</button>
+        </div>
+        <p class="byod-note">Prefer to run it yourself? <a href="https://github.com/Agentic-Po/climate-dashboard-kit" target="_blank" rel="noopener noreferrer">Fork this kit on GitHub &rarr;</a></p>
+        <p class="byod-footer">An AI-assisted community project. AI can make mistakes — verify important outputs.</p>
+      </section>
+
+      <!-- Step 2 — key entry -->
+      <section class="byod-step" id="byod-step2" hidden>
+        <h2>Paste your builder key</h2>
+        <div class="byod-trust">
+          <p><strong>Before you paste your builder key, read this.</strong></p>
+          <p>Your Minds builder key is an account-wide credential. It can message every Mind you own, read your Cognition balances, and manage your circles. Minds does not offer scoped keys yet.</p>
+          <p><strong>What happens to it:</strong> your key stays in this browser only. It is never stored on any server. Each message you send relays it once, over HTTPS, through this dashboard's proxy to the Minds API &mdash; the proxy never writes it down, never logs it, and never shows it to anyone, including us. Log out and it's gone.</p>
+          <p><strong>What you're trusting:</strong> this dashboard is an AI-assisted project, built and maintained with AI tooling. <strong>AI can make mistakes — verify important outputs before relying on them.</strong> While your key is in transit through the proxy, a compromise of that proxy could expose it. Nothing is kept at rest. The proxy runs on Cloudflare; like any HTTPS service, Cloudflare's infrastructure processes requests in transit.</p>
+          <p><strong>Reduce your risk:</strong> create a <strong>new key just for this</strong>, with a <strong>short expiry</strong> (30 days) &mdash; expiry is the only blast-radius control Minds gives you. Delete the key in your Builder console at any time; that instantly cuts off this dashboard. Prefer zero trust in us? <a id="byod-selfhost" href="#" target="_blank" rel="noopener noreferrer">Self-host the kit &rarr;</a></p>
+        </div>
+        <label class="byod-check"><input type="checkbox" id="byod-ack"> <span>I understand this key grants account-wide access and I'm using a dedicated, short-expiry key.</span></label>
+        <input id="byod-key" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your builder key (JWT)" aria-label="Builder key">
+        <p class="byod-err" id="byod-key-err"></p>
+        <label class="byod-check"><input type="checkbox" id="byod-remember"> <span>Remember on this device <span class="byod-note">(saves the key in localStorage — anyone with access to this browser profile can use it; default is this tab session only)</span></span></label>
+        <div class="byod-actions">
+          <button class="byod-btn" id="byod-verify" type="button">Verify key &amp; list my Minds</button>
+          <button class="byod-btn secondary" id="byod-back1" type="button">&larr; Back</button>
+        </div>
+      </section>
+
+      <!-- Step 3 — pick a Mind -->
+      <section class="byod-step" id="byod-step3" hidden>
+        <h2>Pick your Mind</h2>
+        <p class="byod-note">Balances load per Mind so you don't attach a broke one. Zero-balance Minds can attach, but replies will fail until topped up.</p>
+        <div class="byod-minds" id="byod-minds"></div>
+        <p class="byod-err" id="byod-minds-err"></p>
+        <div class="byod-actions">
+          <button class="byod-btn secondary" id="byod-refresh-minds" type="button">Refresh list</button>
+          <button class="byod-btn secondary" id="byod-back2" type="button">&larr; Change key</button>
+        </div>
+      </section>
+
+      <!-- Step 3.5 — name your dashboard (slug claim; Q1) -->
+      <section class="byod-step" id="byod-step35" hidden>
+        <h2>Name your dashboard</h2>
+        <p class="byod-note">Claim a permanent link for this dashboard. Come back on any browser, paste your key, and it restores — your key itself is still never stored anywhere.</p>
+        <div class="byod-slugrow">
+          <span class="byod-slugbase">/d/</span>
+          <input id="byod-slug" type="text" autocomplete="off" spellcheck="false" maxlength="32" aria-label="Dashboard link name" placeholder="my-climate-dashboard">
+        </div>
+        <p class="byod-slug-status" id="byod-slug-status"></p>
+        <label class="byod-check"><input type="checkbox" id="byod-consent"> <span><strong>Publish a public replay of this dashboard.</strong> Anyone with the link <code id="byod-consent-slug">/d/&hellip;</code> can see my canvas and a replay of my chat with <span id="byod-consent-mind">my Mind</span> &mdash; including everything I type here while public is on. My Cognition balance and my key are never shown. I can switch this off or delete the replay at any time from my dashboard.</span></label>
+        <p class="byod-err" id="byod-claim-err"></p>
+        <div class="byod-actions">
+          <button class="byod-btn" id="byod-claim" type="button">Claim my link</button>
+          <button class="byod-btn secondary" id="byod-skip-claim" type="button">Skip for now</button>
+        </div>
+        <p class="byod-note">Claiming is one-time in this version — no renames or transfers yet. Leaving the checkbox off still claims your link (nothing is published).</p>
+      </section>
+    </div>
+  </div>
+  <div id="byod-toast" hidden></div>
+
+  <script>
+  (function () {
+    "use strict";
+    var BASE = "https://minds-chat-proxy.poc-2d9.workers.dev";
+    // localhost QA mode: a local mock API serves the same routes same-origin,
+    // so end-to-end tests run without CORS. No effect on the production origin.
+    if (location.hostname === "localhost" || location.hostname === "127.0.0.1") BASE = "";
+    var $ = function (id) { return document.getElementById(id); };
+    var reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    function esc(s) {
+      return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+        return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
+      });
+    }
+    function el(tag, cls, text) {
+      var e = document.createElement(tag);
+      if (cls) e.className = cls;
+      if (text != null) e.textContent = text;
+      return e;
+    }
+    function formatTime(iso) {
+      if (!iso) return "";
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return "";
+      try { return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); } catch (e) { return ""; }
+    }
+
+    /* ============ Shared sanitizer (chat rich text) ============ */
+    var ALLOWED_TAGS = { P:1, BR:1, STRONG:1, EM:1, B:1, I:1, UL:1, OL:1, LI:1, A:1, CODE:1 };
+    function sanitizeInto(target, html) {
+      var tpl = document.createElement("template");
+      tpl.innerHTML = String(html || "");
+      function walk(srcParent, dstParent) {
+        var node = srcParent.firstChild;
+        while (node) {
+          var next = node.nextSibling;
+          if (node.nodeType === 3) {
+            dstParent.appendChild(document.createTextNode(node.nodeValue));
+          } else if (node.nodeType === 1) {
+            var tag = node.tagName.toUpperCase();
+            if (tag === "SCRIPT" || tag === "STYLE") { /* drop entirely */ }
+            else if (ALLOWED_TAGS[tag]) {
+              var a = document.createElement(tag.toLowerCase());
+              if (tag === "A") {
+                var href = String(node.getAttribute("href") || "").trim();
+                // Allowlist: http(s), mailto, or same-page relative. Reject other
+                // schemes AND protocol-relative "//host" URLs.
+                if (!/^(https?:|mailto:)/i.test(href) &&
+                    (/^[a-z][a-z0-9+.-]*:/i.test(href) || /^\/\//.test(href))) href = "#";
+                a.setAttribute("href", href || "#");
+                a.setAttribute("rel", "noopener noreferrer");
+                a.setAttribute("target", "_blank");
+              }
+              dstParent.appendChild(a);
+              walk(node, a);
+            } else {
+              walk(node, dstParent); /* unwrap unknown tags, keep text */
+            }
+          }
+          node = next;
+        }
+      }
+      walk(tpl.content, target);
+    }
+
+    /* ============ Canvas payload extraction (security-critical) ============ */
+    function decodeEntities(s) {
+      var tpl = document.createElement("template");
+      tpl.innerHTML = String(s || "");
+      return tpl.content.textContent || "";
+    }
+    // Returns {fragment, chatHtml} or null. fragment = raw HTML string for srcdoc.
+    function extractCanvas(rawMessage, buildish) {
+      var raw = String(rawMessage || "");
+      var m, fragment = null, chatHtml = raw;
+
+      function lastBetween(s, open, close) {
+        var end = s.lastIndexOf(close);
+        if (end === -1) return null;
+        var start = s.lastIndexOf(open, end);
+        if (start === -1) return null;
+        return { inner: s.slice(start + open.length, end),
+                 outer: s.slice(0, start) + " " + s.slice(end + close.length) };
+      }
+
+      // 1) [[CANVAS]] sentinels in the raw string
+      m = lastBetween(raw, "[[CANVAS]]", "[[/CANVAS]]");
+      // 1a) the Mind occasionally escapes the closing slash: [[\/CANVAS]]
+      if (!m) m = lastBetween(raw, "[[CANVAS]]", "[[\\/CANVAS]]");
+      // 1b) sentinels only visible after entity/tag stripping
+      if (!m) {
+        var decoded = decodeEntities(raw);
+        var dm = lastBetween(decoded, "[[CANVAS]]", "[[/CANVAS]]");
+        if (!dm) dm = lastBetween(decoded, "[[CANVAS]]", "[[\\/CANVAS]]");
+        if (dm) { m = dm; chatHtml = esc(dm.outer); }
+      }
+      if (m) {
+        fragment = m.inner;
+        if (chatHtml === raw) chatHtml = m.outer;
+        // fragment may itself be entity-encoded HTML
+        if (fragment.indexOf("<") === -1 && fragment.indexOf("&lt;") !== -1) {
+          fragment = decodeEntities(fragment);
+        }
+        return { fragment: fragment.trim(), chatHtml: chatHtml };
+      }
+
+      // 2) HTML comment markers
+      m = lastBetween(raw, "<!--CANVAS-->", "<!--/CANVAS-->");
+      if (m) return { fragment: m.inner.trim(), chatHtml: m.outer };
+
+      // 3) fenced ```html block (on the decoded text)
+      var text = decodeEntities(raw);
+      var fenced = text.match(/```html\s*([\s\S]*?)```(?![\s\S]*```html)/);
+      if (fenced && fenced[1] && fenced[1].trim()) {
+        return { fragment: fenced[1].trim(), chatHtml: esc(text.replace(fenced[0], " ")) };
+      }
+
+      // 4) bare payload, only when the visitor's last message was build-ish
+      if (buildish) {
+        var t = raw.trim();
+        if (/^(<div|<section|<!doctype|<html)/i.test(t)) {
+          return { fragment: t, chatHtml: "" };
+        }
+        var td = text.trim();
+        if (/^(<div|<section|<!doctype|<html)/i.test(td)) {
+          return { fragment: td, chatHtml: "" };
+        }
+      }
+      return null;
+    }
+
+    // Defense-in-depth scrub. Sandbox ("") is the real barrier; this is belt-and-braces.
+    function scrubFragment(frag) {
+      var s = String(frag || "");
+      if (s.length > 16384) return null; // oversize -> caller falls back to text card
+      s = s.replace(/<script\b[\s\S]*?<\/script\s*>/gi, "");
+      s = s.replace(/<script\b[^>]*>/gi, "");
+      s = s.replace(/<\/?(iframe|object|embed|form|base|link|meta)\b[^>]*>/gi, "");
+      s = s.replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "");
+      s = s.replace(/javascript:/gi, "blocked:");
+      return s;
+    }
+
+    var SRCDOC_HEAD =
+      '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; img-src data:">' +
+      '<style>html,body{margin:0;padding:0;height:100%;background:#0b0d10;color:#e6e8eb;' +
+      'font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Arial,sans-serif;font-size:16px}' +
+      '*{box-sizing:border-box}</style>';
+
+    var BUILDISH_RE = /\b(build|render|show|draw|design|make|create|visuali[sz]e|chart|dashboard|poster|quiz|page)\b/i;
+
+    /* ============ Chat factory ============ */
+    // makeChat: parameterized port of the original Chat IIFE. Builds its own DOM
+    // into mount; polls only while started; adaptive cadence per spec.
+    function makeChat(cfg) {
+      var alias = cfg.alias;
+      var isTemplate = alias === "workshop";
+      var WHO = cfg.who || "Po's Minds Companion"; // display name for the Mind side
+      var MAX_LENGTH = 2000;
+      var BASE_POLL = 10000, FAST_POLL = 5000, SLOW_POLL = 20000;
+      var FAST_WINDOW = 120000;
+
+      // ---- DOM ----
+      var panel = el("aside", "chat-panel");
+      panel.hidden = true;
+      var head = el("div", "ch-head");
+      var h2 = el("h2");
+      h2.appendChild(el("span", "dot"));
+      h2.appendChild(document.createTextNode(cfg.who ? "Ask " + WHO : "Ask Po's Minds Companion"));
+      head.appendChild(h2);
+      head.appendChild(el("p", "cap", isTemplate
+        ? "The same AI answering here fetched the live data on the left."
+        : "Ask for something visual — replies render on the canvas."));
+      var historyEl = el("section", "ch-history");
+      historyEl.setAttribute("aria-live", "polite");
+      historyEl.setAttribute("aria-label", "Conversation history");
+      var thinkingEl = el("div", "ch-thinking");
+      thinkingEl.hidden = true;
+      thinkingEl.setAttribute("role", "status");
+      var dots = el("span", "thinking-dots");
+      dots.setAttribute("aria-hidden", "true");
+      dots.appendChild(el("span")); dots.appendChild(el("span")); dots.appendChild(el("span"));
+      thinkingEl.appendChild(dots);
+      thinkingEl.appendChild(el("span", null, isTemplate
+        ? WHO + " is thinking…"
+        : WHO + " is building…"));
+      var noteEl = el("div", "thinking-note", "Replies can take a moment — a good time for discussion.");
+      noteEl.hidden = true;
+      var statusEl = el("div", "ch-status");
+      statusEl.setAttribute("role", "status");
+      var chipsEl = el("div", "ch-chips");
+      var composer = el("form", "ch-composer");
+      composer.setAttribute("novalidate", "");
+      var row = el("div", "composer-row");
+      var input = el("textarea", "ch-input");
+      input.maxLength = 2000; input.rows = 1; input.required = true;
+      input.placeholder = isTemplate
+        ? "Ask about sustainability and climate change…"
+        : "Ask the Companion to build something…";
+      input.setAttribute("aria-label", "Your message");
+      var sendBtn = el("button", "ch-send", "Send");
+      sendBtn.type = "submit";
+      row.appendChild(input); row.appendChild(sendBtn);
+      var metaRow = el("div", "composer-meta");
+      var countEl = el("span", "ch-count", "0/2000");
+      metaRow.appendChild(countEl);
+      composer.appendChild(row); composer.appendChild(metaRow);
+      panel.appendChild(head); panel.appendChild(historyEl); panel.appendChild(thinkingEl);
+      panel.appendChild(noteEl); panel.appendChild(statusEl); panel.appendChild(chipsEl);
+      panel.appendChild(composer);
+      cfg.mount.appendChild(panel);
+
+      // chips
+      var hasVisitorMsg = false;
+      function renderChips() {
+        chipsEl.innerHTML = "";
+        var list = cfg.chips || [];
+        if (!isTemplate && hasVisitorMsg) { chipsEl.hidden = true; return; }
+        chipsEl.hidden = list.length === 0;
+        for (var i = 0; i < list.length; i++) {
+          (function (txt) {
+            var b = el("button", "chip", txt);
+            b.type = "button";
+            b.addEventListener("click", function () {
+              if (isSending) return;
+              input.value = txt;
+              updateCharCount(); autoResize();
+              sendMessage(null);
+            });
+            chipsEl.appendChild(b);
+          })(list[i]);
+        }
+      }
+
+      // ---- state ----
+      var pollTimer = null, running = false, isSending = false;
+      var lastSeenCompanionId = null, isWaitingForReply = false;
+      var statusClearTimer = null, hasInitialHistory = false, historyInFlight = false, thinkingFailsafe = null;
+      var lastSendAt = 0, unchangedPolls = 0, lastCount = -1;
+      var firstRender = true;
+      var lastBuildishSend = false;   // this session's last send was build-ish
+      var historyBuildish = false;    // last visitor message in history is build-ish (survives reload)
+      function effectiveBuildish() { return lastBuildishSend || historyBuildish; }
+      var messagesCache = [];
+
+      function getLatestCompanion(messages) {
+        var latest = null, latestTime = -Infinity;
+        for (var i = 0; i < messages.length; i++) {
+          var m = messages[i];
+          if (!m || m.partyType !== 0) continue;
+          var t = new Date(m.createdAt).getTime();
+          if (isNaN(t)) continue;
+          if (t > latestTime) { latestTime = t; latest = m; }
+        }
+        return latest;
+      }
+      function hideThinking() {
+        thinkingEl.hidden = true; noteEl.hidden = true; isWaitingForReply = false;
+        if (thinkingFailsafe) { clearTimeout(thinkingFailsafe); thinkingFailsafe = null; }
+      }
+      function showThinking() {
+        thinkingEl.hidden = false; noteEl.hidden = false; isWaitingForReply = true;
+        if (thinkingFailsafe) clearTimeout(thinkingFailsafe);
+        thinkingFailsafe = setTimeout(hideThinking, 300000);
+      }
+
+      // On canvas tabs the chat bubble for a Mind message shows only the
+      // outside-marker text; the payload renders on the canvas.
+      function chatBodyFor(msg) {
+        if (isTemplate || msg.partyType !== 0) return msg.messageText || "";
+        var ex = null;
+        try { ex = extractCanvas(msg.messageText, effectiveBuildish()); } catch (e) {}
+        if (ex && ex.fragment) {
+          var t = String(ex.chatHtml || "").trim();
+          return t || "<em>Rendered on the canvas.</em>";
+        }
+        return msg.messageText || "";
+      }
+
+      function renderHistory(messages) {
+        var nearBottom = (historyEl.scrollHeight - historyEl.scrollTop - historyEl.clientHeight) < 80;
+        var shouldScroll = nearBottom || firstRender;
+        var savedScrollTop = historyEl.scrollTop;
+        firstRender = false;
+        historyEl.innerHTML = "";
+        if (!messages || messages.length === 0) {
+          var empty = el("div", "empty-state",
+            isTemplate ? "No messages yet. Try a suggested question below."
+                       : "No messages yet. Try a starter below to build something.");
+          historyEl.appendChild(empty);
+          return;
+        }
+        var sorted = messages.slice().sort(function (a, b) {
+          var ta = new Date(a.createdAt).getTime(), tb = new Date(b.createdAt).getTime();
+          if (isNaN(ta)) ta = 0; if (isNaN(tb)) tb = 0;
+          return ta - tb;
+        });
+        var frag = document.createDocumentFragment();
+        for (var i = 0; i < sorted.length; i++) {
+          var msg = sorted[i];
+          var isCompanion = msg.partyType === 0;
+          var fallbackName = isCompanion ? WHO : "Visitor";
+          var senderName = (msg.senderName && typeof msg.senderName === "string") ? msg.senderName : fallbackName;
+          var bubble = el("article", "message " + (isCompanion ? "companion" : "visitor"));
+          bubble.setAttribute("aria-label", (isCompanion ? "Companion" : "Visitor") + " message");
+          var meta = el("div", "meta");
+          var sender = el("span", "sender", senderName);
+          var time = document.createElement("time"); time.className = "time";
+          time.dateTime = msg.createdAt || ""; time.textContent = formatTime(msg.createdAt);
+          meta.appendChild(sender); meta.appendChild(time);
+          var body = el("div", "body");
+          if (isCompanion) sanitizeInto(body, chatBodyFor(msg));
+          else body.textContent = msg.messageText || ""; // visitors: textContent ONLY
+          bubble.appendChild(meta); bubble.appendChild(body);
+          frag.appendChild(bubble);
+        }
+        historyEl.appendChild(frag);
+        historyEl.style.scrollBehavior = "auto";
+        if (shouldScroll) historyEl.scrollTop = historyEl.scrollHeight;
+        else historyEl.scrollTop = savedScrollTop;
+        historyEl.style.scrollBehavior = "";
+      }
+
+      function checkForCompanionReply(messages) {
+        var latest = getLatestCompanion(messages);
+        if (!latest) return;
+        var latestId = latest.messageId || latest.createdAt;
+        if (!latestId) return;
+        if (isWaitingForReply && lastSeenCompanionId !== null && latestId !== lastSeenCompanionId) hideThinking();
+        lastSeenCompanionId = latestId;
+      }
+
+      function showStatus(message, kind) {
+        if (statusClearTimer) { clearTimeout(statusClearTimer); statusClearTimer = null; }
+        statusEl.textContent = message;
+        statusEl.className = "ch-status " + (kind || "info");
+        if (kind === "success" || kind === "info") {
+          statusClearTimer = setTimeout(function () {
+            statusEl.textContent = ""; statusEl.className = "ch-status"; statusClearTimer = null;
+          }, 4000);
+        }
+      }
+      function clearStatus() {
+        if (statusClearTimer) { clearTimeout(statusClearTimer); statusClearTimer = null; }
+        statusEl.textContent = ""; statusEl.className = "ch-status";
+      }
+      function updateCharCount() {
+        var len = input.value.length;
+        countEl.textContent = len + "/" + MAX_LENGTH;
+        countEl.classList.toggle("over", len > MAX_LENGTH);
+      }
+      function autoResize() {
+        input.style.height = "auto";
+        input.style.height = Math.min(input.scrollHeight, 120) + "px";
+      }
+
+      function historyUrl(bust) {
+        var u = BASE + "/history" + (isTemplate ? "" : "?tab=" + encodeURIComponent(alias));
+        // post-send fetch busts the worker's 5s edge cache so the visitor's
+        // just-sent message never vanishes for a poll cycle
+        if (bust) u += (u.indexOf("?") === -1 ? "?" : "&") + "_=" + Date.now();
+        return u;
+      }
+
+      function fetchHistory(bust) {
+        if (historyInFlight) return Promise.resolve();
+        historyInFlight = true;
+        // BYOD tabs supply their own transport (relay + client-side merge);
+        // legacy tabs keep the original same-shape fetch untouched.
+        var p = cfg.transport
+          ? cfg.transport.history()
+          : fetch(historyUrl(bust), { method: "GET", headers: { "Accept": "application/json" }, credentials: "omit", cache: "no-store" })
+              .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); });
+        return p
+          .then(function (data) {
+            var messages = Array.isArray(data) ? data : [];
+            hasInitialHistory = true;
+            messagesCache = messages;
+            if (messages.length === lastCount) unchangedPolls++;
+            else { unchangedPolls = 0; lastCount = messages.length; }
+            hasVisitorMsg = messages.some(function (m) { return m && m.partyType === 1; });
+            // derive build-ish from the LAST visitor message so detector 4
+            // still works after a reload (no in-session send yet)
+            var lastVisitorText = "";
+            for (var vi = messages.length - 1; vi >= 0; vi--) {
+              var vm = messages[vi];
+              if (vm && vm.partyType === 1) { lastVisitorText = String(vm.messageText || ""); break; }
+            }
+            historyBuildish = !!lastVisitorText && BUILDISH_RE.test(lastVisitorText);
+            renderChips();
+            checkForCompanionReply(messages);
+            renderHistory(messages);
+            if (cfg.onMessages) { try { cfg.onMessages(messages); } catch (e) {} }
+          })
+          .catch(function () {
+            if (!hasInitialHistory) showStatus("Unable to load conversation. Retrying automatically…", "error");
+          })
+          .finally(function () { historyInFlight = false; });
+      }
+
+      function currentInterval() {
+        if (Date.now() - lastSendAt < FAST_WINDOW) return FAST_POLL;
+        if (unchangedPolls >= 3) return SLOW_POLL;
+        return BASE_POLL;
+      }
+      function loop() {
+        if (!running) return;
+        pollTimer = setTimeout(function () {
+          fetchHistory().then(loop, loop);
+        }, currentInterval());
+      }
+      function start() {
+        if (running) return;
+        running = true;
+        fetchHistory();
+        loop();
+      }
+      function stop() {
+        running = false;
+        if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
+      }
+
+      async function sendMessage(event) {
+        if (event) event.preventDefault();
+        if (isSending) return;
+        var text = input.value, trimmed = text.trim();
+        if (trimmed.length === 0) { showStatus("Please enter a message before sending.", "error"); input.focus(); return; }
+        if (trimmed.length > MAX_LENGTH) { showStatus("Message is too long. Maximum " + MAX_LENGTH + " characters allowed.", "error"); input.focus(); return; }
+        clearStatus();
+        isSending = true; sendBtn.disabled = true; input.disabled = true;
+        var statusHandled = false;
+        function handleError(msg) { showStatus(msg, "error"); statusHandled = true; }
+        try {
+          var sendUrl = BASE + "/send" + (isTemplate ? "" : "?tab=" + encodeURIComponent(alias));
+          var response = cfg.transport
+            ? await cfg.transport.send(text)
+            : await fetch(sendUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Accept": "application/json" },
+                credentials: "omit",
+                body: JSON.stringify({ messageText: text })
+              });
+          if (response.ok) { // worker forwards upstream status verbatim — accept any 2xx
+            try { await response.json(); } catch (e) {}
+            input.value = "";
+            autoResize(); updateCharCount();
+            showStatus("Message sent.", "success");
+            showThinking();
+            lastSendAt = Date.now();
+            lastBuildishSend = BUILDISH_RE.test(trimmed);
+            hasVisitorMsg = true;
+            renderChips();
+            if (cfg.onSend) { try { cfg.onSend(trimmed); } catch (e) {} }
+            await fetchHistory(true);
+            if (running) { stop(); start(); } // re-arm at fast cadence
+          } else if (response.status === 429) {
+            handleError("Lots of questions right now — try again in a moment.");
+          } else if (response.status === 400) {
+            var data = null;
+            try { data = await response.json(); } catch (e) {}
+            var friendly400 = {
+              bad_message: "Message could not be sent (empty or too long).",
+              bad_mind: "That Mind could not be found on your account.",
+              bad_tab: "This tab is no longer available — refresh the page."
+            };
+            handleError((data && data.error && friendly400[data.error]) || "Message could not be sent (it may be empty or too long).");
+          } else {
+            handleError("Unexpected server response (" + response.status + "). Please try again.");
+          }
+        } catch (err) {
+          if (!statusHandled) showStatus("Network error. Please check your connection and try again.", "error");
+        } finally {
+          isSending = false; sendBtn.disabled = false; input.disabled = false; input.focus();
+        }
+      }
+
+      composer.addEventListener("submit", sendMessage);
+      input.addEventListener("input", function () { updateCharCount(); autoResize(); });
+      input.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
+          e.preventDefault();
+          if (typeof composer.requestSubmit === "function") composer.requestSubmit();
+          else composer.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+        }
+      });
+
+      updateCharCount();
+      renderChips();
+
+      return {
+        panel: panel,
+        start: start,
+        stop: stop,
+        fetchNow: fetchHistory,
+        isRunning: function () { return running; },
+        wasBuildish: function () { return effectiveBuildish(); },
+        messages: function () { return messagesCache; }
+      };
+    }
+
+    /* ============ Canvas stage factory ============ */
+    function makeCanvas(alias, who) {
+      who = who || "Po's Minds Companion";
+      var stage = el("section", "canvas-stage");
+      stage.hidden = true;
+      stage.setAttribute("aria-label", "Mind-rendered canvas");
+
+      var titleEl = el("h2", "canvas-title", ""); // full tab title, set on activate (textContent only)
+
+      var caption = el("div", "canvas-caption");
+      caption.appendChild(el("span", "who", who));
+      var capText = el("span", null, "");
+      caption.appendChild(capText);
+
+      var wrap = el("div", "canvas-frame-wrap");
+      var iframe = document.createElement("iframe");
+      iframe.className = "canvas-frame";
+      // SECURITY: fully sandboxed — no scripts, no same-origin, nothing.
+      iframe.setAttribute("sandbox", "");
+      iframe.setAttribute("referrerpolicy", "no-referrer");
+      iframe.setAttribute("title", "Canvas rendered by " + who);
+      wrap.appendChild(iframe);
+
+      // empty-state overlay
+      var emptyOv = el("div", "canvas-overlay");
+      var emptyInner = el("div", "canvas-empty-inner");
+      emptyInner.innerHTML =
+        '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
+        '<path d="M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8L12 2z" fill="#93b4ff"/>' +
+        '<path d="M19 14l.9 2.6L22.5 17.5l-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9L19 14z" fill="#4fc3f7"/></svg>' +
+        '<h2>This canvas is empty — ask the Companion to build something.</h2>' +
+        '<p class="sub">Replies from Po’s Minds Companion render live here.</p>' +
+        '<p class="fine">Replies can take 30 s – a few minutes.</p>';
+      emptyOv.appendChild(emptyInner);
+
+      // building overlay
+      var buildOv = el("div", "canvas-overlay");
+      buildOv.hidden = true;
+      var buildInner = el("div", "canvas-building-inner");
+      var g1 = el("div", "skel ghost"), g2 = el("div", "skel ghost"), g3 = el("div", "skel ghost");
+      var bline = el("p", "bline");
+      var blineText = el("span", null, who + " is building…");
+      var btimer = el("span", "num", "⏱ 0:00");
+      bline.appendChild(blineText); bline.appendChild(btimer);
+      var bsub = el("p", "bsub", "");
+      buildInner.appendChild(g1); buildInner.appendChild(g2); buildInner.appendChild(g3);
+      buildInner.appendChild(bline); buildInner.appendChild(bsub);
+      buildOv.appendChild(buildInner);
+
+      // text-card overlay (plain-text reply while canvas empty)
+      var textOv = el("div", "canvas-overlay");
+      textOv.hidden = true;
+      var textCard = el("div", "canvas-textcard");
+      textOv.appendChild(textCard);
+
+      // slim non-covering "building" strip — used when a showcase is already
+      // rendered so a follow-up question never hides a working canvas
+      var buildStrip = el("div", "canvas-buildstrip");
+      buildStrip.hidden = true;
+      var stripText = el("span", null, who + " is building…");
+      var stripTimer = el("span", "num", "⏱ 0:00");
+      buildStrip.appendChild(stripText); buildStrip.appendChild(stripTimer);
+
+      wrap.appendChild(emptyOv); wrap.appendChild(buildOv); wrap.appendChild(textOv);
+      stage.appendChild(titleEl); stage.appendChild(caption); stage.appendChild(buildStrip); stage.appendChild(wrap);
+
+      var renderedKey = null;      // createdAt of the message currently rendered
+      var hasRender = false;
+      var pendingSince = 0;
+      var buildTimer = null;
+      var lastMindKey = "";        // newest Mind message id/createdAt seen
+      var keyAtSend = "";          // lastMindKey at the moment of send — a NEW key clears building
+
+      function setCaption(iso) {
+        capText.textContent = " · Rendered " + (iso ? "at " + formatTime(iso) : "");
+      }
+      function stopBuildTimer() {
+        if (buildTimer) { clearInterval(buildTimer); buildTimer = null; }
+      }
+      function showBuilding() {
+        if (hasRender) {
+          // showcase stays visible; slim strip only
+          buildStrip.hidden = false;
+        } else {
+          emptyOv.hidden = true; textOv.hidden = true; buildOv.hidden = false;
+        }
+        stopBuildTimer();
+        buildTimer = setInterval(function () {
+          var s = Math.floor((Date.now() - pendingSince) / 1000);
+          var mmss = "\u23F1 " + Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+          btimer.textContent = mmss; stripTimer.textContent = mmss;
+          if (s >= 300) {
+            // 300s failsafe: never leave anything covering a render
+            if (hasRender) { hideBuilding(); return; }
+            bsub.textContent = "Taking longer than usual — the reply will appear here when ready; keep chatting.";
+            stopBuildTimer();
+          } else if (s >= 60) {
+            bsub.textContent = "Still building — Minds do real work, not autocomplete.";
+          }
+        }, 1000);
+      }
+      function hideBuilding() {
+        buildOv.hidden = true;
+        buildStrip.hidden = true;
+        stopBuildTimer();
+        pendingSince = 0;
+        bsub.textContent = "";
+        btimer.textContent = "⏱ 0:00";
+        stripTimer.textContent = "⏱ 0:00";
+      }
+
+      function onSend() {
+        pendingSince = Date.now();
+        keyAtSend = lastMindKey;
+        showBuilding();
+      }
+
+      // messages -> canvas. Called on every history fetch for this tab.
+      function onMessages(messages, wasBuildish) {
+        try {
+          var minds = (messages || []).filter(function (m) { return m && m.partyType === 0; })
+            .sort(function (a, b) { return String(a.createdAt || "").localeCompare(String(b.createdAt || "")); });
+          if (!minds.length) return;
+
+          // find last renderable message — detector 4 (bare payload) gated on
+          // the visitor's last message being build-ish; detectors 1-3 ungated
+          var found = null, foundMsg = null;
+          for (var i = minds.length - 1; i >= 0 && !found; i--) {
+            var ex = extractCanvas(minds[i].messageText, !!wasBuildish);
+            if (ex && ex.fragment) {
+              var scrubbed = scrubFragment(ex.fragment);
+              if (scrubbed && scrubbed.trim()) { found = scrubbed; foundMsg = minds[i]; }
+            }
+          }
+
+          var newest = minds[minds.length - 1];
+          var newestKey = String(newest.messageId || newest.createdAt || "");
+          // a NEW Mind message id after the send clears "building" — id-change
+          // detection, immune to upstream/client clock skew
+          if (pendingSince && newestKey) {
+            if (!keyAtSend) keyAtSend = newestKey; // sent before first history fetch: baseline now
+            else if (newestKey !== keyAtSend) hideBuilding();
+          }
+          lastMindKey = newestKey || lastMindKey;
+
+          if (found) {
+            var key = foundMsg.createdAt || "";
+            if (key !== renderedKey) {
+              renderedKey = key;
+              iframe.srcdoc = SRCDOC_HEAD + found; // property assignment
+              hasRender = true;
+              emptyOv.hidden = true; textOv.hidden = true;
+              setCaption(foundMsg.createdAt);
+              if (!reducedMotion) {
+                iframe.classList.remove("reveal");
+                void iframe.offsetWidth;
+                iframe.classList.add("reveal");
+              }
+            }
+          } else if (!hasRender) {
+            // plain-text replies with an empty canvas -> large text card
+            var lastText = newest.messageText || "";
+            if (lastText && buildOv.hidden) {
+              emptyOv.hidden = true;
+              textCard.innerHTML = "";
+              var bodyDiv = el("div");
+              sanitizeInto(bodyDiv, lastText);
+              textCard.appendChild(bodyDiv);
+              textCard.appendChild(el("div", "tc-cap",
+                "Companion replied in text — try: “build that as a page”."));
+              textOv.hidden = false;
+            }
+          }
+        } catch (e) { /* a malformed reply must never blank a working showcase */ }
+      }
+
+      return { stage: stage, titleEl: titleEl, onMessages: onMessages, onSend: onSend,
+               lastRenderedKey: function () { return renderedKey; } };
+    }
+
+    /* ============ Tabs controller ============ */
+    var Tabs = (function () {
+      var strip = $("tabscroll");
+      var newBtn = $("newtab");
+      var chatMount = $("chatcol");
+      var registry = [];               // from GET /tabs
+      var localTabs = [];              // client-side-only tabs (BYOD "My Dashboard") — never sent to /tabs
+      var instances = {};              // alias -> {kind, chat, canvas, btn, lastSeenMindAt}
+      var active = null;
+      var badgeTimer = null;
+      var adminKey = "";
+
+      // admin key from #key=... (typed by Po; never hardcoded)
+      try {
+        var hm = (location.hash || "").match(/key=([^&]+)/);
+        if (hm) {
+          adminKey = decodeURIComponent(hm[1]);
+          localStorage.setItem("mc_admin_key", adminKey);
+          // never leave the key visible in the projector's URL bar
+          try { history.replaceState(null, "", location.pathname + location.search); } catch (e2) {}
+        }
+        else adminKey = localStorage.getItem("mc_admin_key") || "";
+      } catch (e) {}
+
+      var CANVAS_CHIPS = [
+        "Build a rainfall dashboard for Hong Kong",
+        "Make a 5-question quiz about typhoons and climate",
+        "Design a poster: 3 ways AI helps climate adaptation",
+        "Surprise me — build anything about climate in Hong Kong"
+      ];
+      var TEMPLATE_CHIPS = [
+        "Which district is hottest right now, and why?",
+        "Is there an urban heat island effect in today's data?",
+        "How could my students use this live data in class?"
+      ];
+
+      function makeTabButton(tab) {
+        var b = el("button", "tabbtn");
+        b.type = "button";
+        b.setAttribute("role", "tab");
+        if (tab.kind === "template") {
+          b.appendChild(el("span", "livedot"));
+        }
+        b.appendChild(el("span", "tlabel", tab.title || tab.alias)); // textContent only
+        b.title = tab.title || tab.alias; // native tooltip for truncated labels
+        b.appendChild(el("span", "unread"));
+        b.addEventListener("click", function () { activate(tab.alias); });
+        return b;
+      }
+
+      function instantiate(tab) {
+        if (instances[tab.alias]) return instances[tab.alias];
+        if (tab.kind === "byod") { // BYOD builds its own instance (relay transport)
+          var binst = BYOD.buildInstance();
+          instances[tab.alias] = binst;
+          return binst;
+        }
+        var inst = { alias: tab.alias, kind: tab.kind, lastSeenMindAt: tab.lastMindAt || "" };
+        if (tab.kind === "template") {
+          inst.stageEl = $("stage");
+          inst.chat = makeChat({
+            alias: "workshop", mount: chatMount, chips: TEMPLATE_CHIPS,
+            onMessages: function (msgs) { noteMindSeen(inst, msgs); }
+          });
+        } else {
+          inst.canvas = makeCanvas(tab.alias);
+          document.body.insertBefore(inst.canvas.stage, chatMount);
+          inst.stageEl = inst.canvas.stage;
+          inst.chat = makeChat({
+            alias: tab.alias, mount: chatMount, chips: CANVAS_CHIPS,
+            onMessages: function (msgs) {
+              inst.canvas.onMessages(msgs, inst.chat && inst.chat.wasBuildish());
+              noteMindSeen(inst, msgs);
+            },
+            onSend: function () { inst.canvas.onSend(); }
+          });
+        }
+        instances[tab.alias] = inst;
+        return inst;
+      }
+
+      function noteMindSeen(inst, msgs) {
+        var newest = "";
+        for (var i = 0; i < msgs.length; i++) {
+          var m = msgs[i];
+          if (m && m.partyType === 0 && String(m.createdAt || "") > newest) newest = String(m.createdAt);
+        }
+        if (inst.alias === active && newest > (inst.lastSeenMindAt || "")) {
+          inst.lastSeenMindAt = newest;
+          setBadge(inst.alias, false);
+        }
+      }
+
+      function setBadge(alias, on) {
+        var inst = instances[alias];
+        var btn = tabButtons[alias];
+        if (!btn) return;
+        btn.classList.toggle("has-unread", !!on);
+        if (on && !reducedMotion) {
+          btn.classList.remove("pulse");
+          void btn.offsetWidth;
+          btn.classList.add("pulse");
+        }
+      }
+
+      var tabButtons = {};
+
+      function renderStrip() {
+        while (strip.firstChild) strip.removeChild(strip.firstChild);
+        tabButtons = {};
+        var all = registry.concat(localTabs);
+        for (var i = 0; i < all.length; i++) {
+          var t = all[i];
+          var b = makeTabButton(t);
+          tabButtons[t.alias] = b;
+          if (t.alias === active) b.classList.add("active");
+          strip.appendChild(b);
+        }
+        strip.appendChild(newBtn); // + lives inside the scroller, after the last tab
+        updateMask();
+      }
+
+      // fade mask only when tabs continue past the right edge
+      function updateMask() {
+        var more = strip.scrollWidth - strip.clientWidth - strip.scrollLeft > 1;
+        strip.classList.toggle("overflow-right", more);
+      }
+      strip.addEventListener("scroll", updateMask, { passive: true });
+      window.addEventListener("resize", updateMask);
+
+      function activate(alias) {
+        var tab = null;
+        var all = registry.concat(localTabs);
+        for (var i = 0; i < all.length; i++) if (all[i].alias === alias) tab = all[i];
+        if (!tab) return;
+        var prev = active ? instances[active] : null;
+        active = alias;
+        try { localStorage.setItem("mc_active_tab", alias); } catch (e) {}
+
+        var inst = instantiate(tab);
+
+        // hide all stages/panels, show active — stages are toggled, never destroyed
+        for (var a in instances) {
+          var it = instances[a];
+          var isActive = a === alias;
+          if (it.stageEl) it.stageEl.hidden = !isActive;
+          if (it.chat && it.chat.panel) it.chat.panel.hidden = !isActive;
+          // background tabs never history-poll
+          if (!isActive && it.chat && it.chat.isRunning()) it.chat.stop();
+        }
+        document.body.classList.toggle("canvas-mode", tab.kind !== "template");
+        if (inst.canvas && inst.canvas.titleEl) inst.canvas.titleEl.textContent = tab.title || tab.alias;
+        for (var b in tabButtons) tabButtons[b].classList.toggle("active", b === alias);
+        var ab = tabButtons[alias];
+        if (ab && ab.scrollIntoView) ab.scrollIntoView({ block: "nearest", inline: "nearest" });
+        setBadge(alias, false);
+
+        if (!document.hidden) inst.chat.start(); // immediate fetch inside start()
+        // mark newest mind message as seen on activation
+        var msgs = inst.chat.messages();
+        if (msgs && msgs.length) noteMindSeen(inst, msgs);
+        else if (badges[alias]) inst.lastSeenMindAt = badges[alias];
+      }
+
+      /* ---- + New canvas ---- */
+      var creating = false;
+      function createTab() {
+        if (creating) return;
+        creating = true;
+        newBtn.disabled = true;
+        // optimistic pill
+        var ghost = el("button", "tabbtn creating");
+        ghost.type = "button";
+        ghost.appendChild(el("span", "tlabel", "creating…"));
+        strip.appendChild(ghost);
+        strip.scrollLeft = strip.scrollWidth;
+
+        var headers = { "Content-Type": "application/json", "Accept": "application/json" };
+        if (adminKey) headers["X-Tab-Key"] = adminKey;
+        fetch(BASE + "/tabs", { method: "POST", headers: headers, credentials: "omit", body: JSON.stringify({}) })
+          .then(function (r) { return r.json().then(function (d) { return { status: r.status, d: d }; }); })
+          .then(function (res) {
+            ghost.remove();
+            if (res.status === 200 && res.d && res.d.tab) {
+              registry.push(res.d.tab);
+              renderStrip();
+              activate(res.d.tab.alias);
+              strip.scrollLeft = strip.scrollWidth;
+            } else if (res.status === 403) {
+              failGhost("no permission — add #key=… to the URL and retry");
+            } else if (res.status === 409) {
+              failGhost("tab limit reached");
+            } else if (res.status === 429) {
+              failGhost("too fast — tap to retry in a moment");
+            } else {
+              failGhost("couldn't create — tap to retry");
+            }
+          })
+          .catch(function () { ghost.remove(); failGhost("couldn't create — tap to retry"); })
+          .finally(function () { creating = false; newBtn.disabled = false; });
+      }
+      function failGhost(text) {
+        var fb = el("button", "tabbtn failed");
+        fb.type = "button";
+        fb.appendChild(el("span", "tlabel", text));
+        fb.addEventListener("click", function () { fb.remove(); createTab(); });
+        strip.appendChild(fb);
+        strip.scrollLeft = strip.scrollWidth;
+      }
+      newBtn.addEventListener("click", createTab);
+
+      /* ---- badges (one 30s timer for all background tabs) ---- */
+      var badges = {};
+      function fetchBadges() {
+        return fetch(BASE + "/badges", { headers: { "Accept": "application/json" }, credentials: "omit", cache: "no-store" })
+          .then(function (r) { if (!r.ok) throw new Error("bad"); return r.json(); })
+          .then(function (map) {
+            badges = map || {};
+            for (var i = 0; i < registry.length; i++) {
+              var t = registry[i];
+              if (t.alias === active || t.kind === "template") continue;
+              var inst = instances[t.alias];
+              var seen = inst ? (inst.lastSeenMindAt || "") : (t.lastMindAt || "");
+              var latest = badges[t.alias] || "";
+              if (latest && latest > seen) setBadge(t.alias, true);
+            }
+          })
+          .catch(function () {});
+      }
+      // Live title refresh: Mind-driven renames appear without a reload.
+      function refreshTitles() {
+        return fetch(BASE + "/tabs", { headers: { "Accept": "application/json" }, credentials: "omit", cache: "no-store" })
+          .then(function (r) { if (!r.ok) throw new Error("bad"); return r.json(); })
+          .then(function (d) {
+            var tabs = (d && Array.isArray(d.tabs)) ? d.tabs : null;
+            if (!tabs) return;
+            var changed = false;
+            for (var i = 0; i < tabs.length; i++) {
+              var t = tabs[i];
+              for (var j = 0; j < registry.length; j++) {
+                if (registry[j].alias === t.alias && registry[j].title !== t.title) {
+                  registry[j].title = t.title;
+                  changed = true;
+                  var btn = tabButtons[t.alias];
+                  if (btn) {
+                    var lbl = btn.querySelector(".tlabel");
+                    if (lbl) lbl.textContent = t.title;
+                    btn.title = t.title || t.alias;
+                  }
+                  if (t.alias === active) {
+                    var inst = instances[t.alias];
+                    if (inst && inst.canvas && inst.canvas.titleEl) inst.canvas.titleEl.textContent = t.title || t.alias;
+                  }
+                }
+              }
+            }
+          })
+          .catch(function () {});
+      }
+      function startBadges() {
+        if (badgeTimer) clearInterval(badgeTimer);
+        badgeTimer = setInterval(function () { fetchBadges(); refreshTitles(); }, 30000);
+      }
+      function stopBadges() {
+        if (badgeTimer) { clearInterval(badgeTimer); badgeTimer = null; }
+      }
+
+      /* ---- boot ---- */
+      function boot() {
+        fetch(BASE + "/tabs", { headers: { "Accept": "application/json" }, credentials: "omit", cache: "no-store" })
+          .then(function (r) { if (!r.ok) throw new Error("bad"); return r.json(); })
+          .then(function (d) {
+            registry = (d && Array.isArray(d.tabs)) ? d.tabs : [{ alias: "workshop", title: "Live Weather", kind: "template" }];
+          })
+          .catch(function () {
+            registry = [{ alias: "workshop", title: "Live Weather", kind: "template" }];
+          })
+          .then(function () {
+            renderStrip();
+            var saved = null;
+            try { saved = localStorage.getItem("mc_active_tab"); } catch (e) {}
+            var target = "workshop";
+            var all = registry.concat(localTabs);
+            for (var i = 0; i < all.length; i++) if (all[i].alias === saved) target = saved;
+            activate(target);
+            fetchBadges();
+            startBadges();
+          });
+      }
+      boot();
+
+      return {
+        addLocal: function (tab) {
+          for (var i = 0; i < localTabs.length; i++) if (localTabs[i].alias === tab.alias) return;
+          localTabs.push(tab);
+          renderStrip();
+        },
+        removeLocal: function (alias) {
+          localTabs = localTabs.filter(function (t) { return t.alias !== alias; });
+          var it = instances[alias];
+          if (it) {
+            if (it.chat) {
+              it.chat.stop();
+              if (it.chat.panel && it.chat.panel.parentNode) it.chat.panel.parentNode.removeChild(it.chat.panel);
+            }
+            if (it.kind !== "template" && it.stageEl && it.stageEl.parentNode) it.stageEl.parentNode.removeChild(it.stageEl);
+            delete instances[alias];
+          }
+          if (active === alias) active = null;
+          renderStrip();
+          activate("workshop");
+        },
+        activate: activate,
+        pause: function () {
+          stopBadges();
+          for (var a in instances) if (instances[a].chat) instances[a].chat.stop();
+        },
+        resume: function () {
+          startBadges();
+          fetchBadges();
+          var inst = active ? instances[active] : null;
+          if (inst && inst.chat) inst.chat.start();
+        }
+      };
+    })();
+
+    /* ============ BYOD — Build Your Own (owner-only, zero-custody) ============ */
+    // The visitor's builder key lives ONLY in this browser (sessionStorage by
+    // default, localStorage opt-in). It is sent solely as the X-Visitor-Key
+    // header on POST /relay/* calls — never in URLs, never rendered into the
+    // page, and error surfaces show fixed friendly strings only.
+    var BYOD = (function () {
+      var K_KEY = "byod_key", K_MIND = "byod_mind", K_SENT = "byod_sent_";
+      var K_CLAIM = "byod_claim", K_KEYFP = "byod_keyfp";
+      var REPO_URL = "https://github.com/Agentic-Po/climate-dashboard-kit";
+      var SLUG_RE = /^[a-z][a-z0-9-]{2,31}$/;
+      // JWT-shaped strings must never enter a public replay (client twin of the worker filter)
+      var JWT_SHAPE_RE = /[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{4,}/;
+      var PROBE_TEXT = "Hello! Setting up my dashboard — please confirm the canvas.";
+      var BYOD_CHIPS = [
+        "Build a rainfall dashboard for Hong Kong",
+        "Make a 5-question quiz about typhoons and climate",
+        "Design a poster: 3 ways AI helps climate adaptation",
+        "Surprise me — build anything about climate in Hong Kong"
+      ];
+      var ERR_TEXT = {
+        missing_key: "No key received — please paste your key again.",
+        bad_key: "That doesn't look like a valid builder key.",
+        expired_key: "That key has expired — create a fresh one in your Builder console.",
+        key_rejected: "The Minds API rejected that key.",
+        bad_mind: "That Mind could not be found on your account.",
+        bad_message: "Message could not be sent (empty or too long).",
+        rate_limited: "Too many requests — wait a moment and try again.",
+        upstream_unreachable: "Minds API unreachable — try again shortly.",
+        upstream_error: "Minds API error — try again shortly.",
+        bad_slug: "3–32 characters: lowercase letters, numbers, hyphens; must start with a letter.",
+        slug_reserved: "That name is reserved.",
+        slug_taken: "That name is taken — try another.",
+        consent_required: "Publishing needs the consent box checked first.",
+        replay_private: "The replay is private — switch it to public first."
+      };
+
+      /* ---- storage (key never leaves the browser except as the relay header) ---- */
+      function getKey() { try { return sessionStorage.getItem(K_KEY) || localStorage.getItem(K_KEY) || ""; } catch (e) { return ""; } }
+      function setKey(k, remember) {
+        try {
+          sessionStorage.setItem(K_KEY, k);
+          if (remember) localStorage.setItem(K_KEY, k); else localStorage.removeItem(K_KEY);
+        } catch (e) {}
+      }
+      function getMind() { try { return JSON.parse(sessionStorage.getItem(K_MIND) || localStorage.getItem(K_MIND) || "null"); } catch (e) { return null; } }
+      function setMind(m) {
+        try {
+          var s = JSON.stringify(m);
+          sessionStorage.setItem(K_MIND, s);
+          if (localStorage.getItem(K_KEY)) localStorage.setItem(K_MIND, s); else localStorage.removeItem(K_MIND);
+        } catch (e) {}
+      }
+      function clearAll() {
+        try {
+          localStorage.removeItem(K_KEY); localStorage.removeItem(K_MIND);
+          sessionStorage.removeItem(K_KEY); sessionStorage.removeItem(K_MIND);
+          localStorage.removeItem(K_CLAIM); sessionStorage.removeItem(K_CLAIM);
+          for (var i = sessionStorage.length - 1; i >= 0; i--) {
+            var n = sessionStorage.key(i);
+            if (n && n.indexOf(K_SENT) === 0) sessionStorage.removeItem(n);
+          }
+        } catch (e) {}
+      }
+      // Owner's own sent messages stay client-side (zero custody — the relay
+      // returns Mind messages only); merged into history by createdAt.
+      function sentList(mindId) { try { return JSON.parse(sessionStorage.getItem(K_SENT + mindId) || "[]"); } catch (e) { return []; } }
+      function pushSent(mindId, text) {
+        var l = sentList(mindId);
+        l.push({ messageText: text, createdAt: new Date().toISOString(), senderName: "You", partyType: 1 });
+        if (l.length > 200) l = l.slice(-200);
+        try { sessionStorage.setItem(K_SENT + mindId, JSON.stringify(l)); } catch (e) {}
+      }
+
+      /* ---- claimed-slug config (holds NO secrets: slug + flags only) ---- */
+      function getClaim() { try { return JSON.parse(sessionStorage.getItem(K_CLAIM) || localStorage.getItem(K_CLAIM) || "null"); } catch (e) { return null; } }
+      function setClaim(c) {
+        try {
+          var s = JSON.stringify(c);
+          sessionStorage.setItem(K_CLAIM, s);
+          if (localStorage.getItem(K_KEY)) localStorage.setItem(K_CLAIM, s); else localStorage.removeItem(K_CLAIM);
+        } catch (e) {}
+      }
+      function clearClaim() { try { sessionStorage.removeItem(K_CLAIM); localStorage.removeItem(K_CLAIM); } catch (e) {} }
+
+      function validSlug(s) {
+        return SLUG_RE.test(s) && s.indexOf("--") === -1 && s.charAt(s.length - 1) !== "-";
+      }
+      function slugify(name) {
+        var s = String(name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").replace(/-{2,}/g, "-");
+        if (!/^[a-z]/.test(s)) s = ("my-" + s).replace(/-+$/, "");
+        if (s.length < 3) s = (s + "-dashboard").replace(/^-+/, "");
+        s = s.slice(0, 32).replace(/-+$/, "");
+        return validSlug(s) ? s : "my-dashboard";
+      }
+      function dashUrl(slug) {
+        return (BASE || location.origin) + "/d/" + slug;
+      }
+      // short local fingerprint of the key — ONLY for the "new key, same
+      // dashboard" toast; never sent anywhere
+      function keyFp(k) {
+        try {
+          return crypto.subtle.digest("SHA-256", new TextEncoder().encode(String(k || ""))).then(function (buf) {
+            var a = new Uint8Array(buf), s = "";
+            for (var i = 0; i < 12; i++) s += ("0" + a[i].toString(16)).slice(-2);
+            return s;
+          });
+        } catch (e) { return Promise.resolve(""); }
+      }
+
+      /* ---- client-side JWT payload decode (offline validation only) ---- */
+      function parseJwt(k) {
+        try {
+          var parts = String(k || "").trim().split(".");
+          if (parts.length < 2) return null;
+          var p = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+          while (p.length % 4) p += "=";
+          return JSON.parse(atob(p));
+        } catch (e) { return null; }
+      }
+
+      /* ---- relay transport ---- */
+      function relay(path, body) {
+        return fetch(BASE + "/relay/" + path, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json", "X-Visitor-Key": getKey() },
+          credentials: "omit",
+          body: JSON.stringify(body || {})
+        });
+      }
+      function relayJson(path, body) {
+        return relay(path, body).then(function (r) {
+          return r.json().catch(function () { return {}; }).then(function (d) {
+            if (!r.ok) {
+              var e = new Error(ERR_TEXT[d && d.error] || "Request failed — please try again.");
+              e.code = d && d.error; e.status = r.status;
+              throw e;
+            }
+            return d;
+          });
+        });
+      }
+
+      function relayGet(path) {
+        return fetch(BASE + "/relay/" + path, {
+          method: "GET",
+          headers: { "Accept": "application/json", "X-Visitor-Key": getKey() },
+          credentials: "omit",
+          cache: "no-store"
+        });
+      }
+      function whoami() {
+        return relayGet("whoami").then(function (r) {
+          if (!r.ok) { var e = new Error("whoami failed"); e.status = r.status; throw e; }
+          return r.json();
+        });
+      }
+      // owner mutations on /d/:slug/* — key header, same-origin (page is served
+      // by the same worker that owns /d/)
+      function dPost(path, body) {
+        return fetch(BASE + "/d/" + path, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json", "X-Visitor-Key": getKey() },
+          credentials: "omit",
+          body: JSON.stringify(body || {})
+        });
+      }
+
+      /* ---- wizard DOM ---- */
+      var overlay = $("byod-overlay");
+      var steps = { 1: $("byod-step1"), 2: $("byod-step2"), 3: $("byod-step3"), 35: $("byod-step35") };
+      function showStep(n) {
+        overlay.hidden = false;
+        for (var k in steps) steps[k].hidden = (String(n) !== k);
+      }
+      function closeWizard() { overlay.hidden = true; }
+      $("byod-join").href = BASE + "/track/join";
+      $("byod-docs").href = BASE + "/track/docs";
+      $("byod-selfhost").href = REPO_URL;
+      $("byod-close").addEventListener("click", closeWizard);
+      overlay.addEventListener("click", function (e) { if (e.target === overlay) closeWizard(); });
+      $("byod-tostep2").addEventListener("click", function () { showStep(2); });
+      $("byod-back1").addEventListener("click", function () { showStep(1); });
+      $("byod-back2").addEventListener("click", function () { showStep(2); });
+      $("byod-refresh-minds").addEventListener("click", function () { loadMinds(); });
+
+      var keyErr = $("byod-key-err");
+      $("byod-verify").addEventListener("click", function () {
+        keyErr.textContent = "";
+        if (!$("byod-ack").checked) { keyErr.textContent = "Please confirm the checkbox above first."; return; }
+        var k = $("byod-key").value.trim();
+        var payload = parseJwt(k);
+        if (!payload) { keyErr.textContent = "That doesn't look like a builder key (expected a JWT)."; return; }
+        if (!(payload.humanId || payload.human_id || payload.sub)) { keyErr.textContent = "This key has no account id inside — is it a Minds builder key?"; return; }
+        if (payload.exp && payload.exp * 1000 < Date.now()) { keyErr.textContent = ERR_TEXT.expired_key; return; }
+        setKey(k, $("byod-remember").checked);
+        $("byod-key").value = ""; // never leave the key sitting in the field
+        var btn = $("byod-verify");
+        btn.disabled = true; btn.textContent = "Verifying…";
+        // Q1 restore: an already-claimed builder skips the Mind list entirely
+        whoami().then(function (d) {
+          if (d && d.claimed) { restoreFromWhoami(d, true); return null; }
+          clearClaim();
+          keyFp(getKey()).then(function (fp) { if (fp) { try { localStorage.setItem(K_KEYFP, fp); } catch (e) {} } });
+          return loadMinds();
+        }).catch(function (e) {
+          if (e && e.status === 401) { keyErr.textContent = ERR_TEXT.key_rejected; return null; }
+          return loadMinds(); // whoami unavailable (e.g. older mock) — fall through
+        }).finally(function () { btn.disabled = false; btn.textContent = "Verify key & list my Minds"; });
+      });
+
+      function restoreFromWhoami(d, viaVerify) {
+        setMind({ mindId: d.mindId, name: d.mindName || d.mindId });
+        setClaim({ slug: d.slug, publicToggle: !!d.publicToggle, mindId: d.mindId,
+                   title: d.title || "My Dashboard", mindName: d.mindName || "" });
+        closeWizard();
+        if (inst || tabAdded) teardown();
+        ensureTab();
+        Tabs.activate("byod");
+        updateShareUi();
+        if (!viaVerify) return;
+        keyFp(getKey()).then(function (fp) {
+          var old = "";
+          try { old = localStorage.getItem(K_KEYFP) || ""; } catch (e) {}
+          var changed = old && fp && old !== fp;
+          if (fp) { try { localStorage.setItem(K_KEYFP, fp); } catch (e) {} }
+          toast(changed
+            ? "New key, same dashboard — your old key can now be deleted."
+            : "Welcome back — restored /d/" + d.slug + " with " + (d.mindName || "your Mind") + ".");
+        });
+      }
+
+      /* ---- step 3: minds + balances ---- */
+      var mindsErr = $("byod-minds-err"), mindsBox = $("byod-minds");
+      function loadMinds() {
+        mindsErr.textContent = "";
+        mindsBox.innerHTML = "";
+        mindsBox.appendChild(el("p", "byod-note", "Loading your Minds…"));
+        return relayJson("minds").then(function (d) {
+          showStep(3);
+          mindsBox.innerHTML = "";
+          var minds = (d && d.minds) || [];
+          if (!minds.length) {
+            mindsBox.appendChild(el("p", "byod-note", "No Minds found on this account yet. Create one in your Builder console, then refresh."));
+            return;
+          }
+          minds.forEach(function (m) {
+            var card = el("div", "byod-mindcard");
+            var left = el("div");
+            left.appendChild(el("div", "mname", m.name || m.mindId));
+            var bal = el("div", "bal", "balance: loading…");
+            left.appendChild(bal);
+            var btn = el("button", "byod-btn", "Attach");
+            btn.type = "button";
+            btn.addEventListener("click", function () { attach(m); });
+            card.appendChild(left); card.appendChild(btn);
+            mindsBox.appendChild(card);
+            relayJson("balance", { mindId: m.mindId }).then(function (b) {
+              var v = (b && b.balance != null) ? b.balance : null;
+              bal.textContent = v == null ? "balance: unavailable" : "balance: " + (Math.round(v * 100) / 100) + " cognition";
+              if (v === 0) bal.textContent += " — replies will fail until topped up";
+            }).catch(function () { bal.textContent = "balance: unavailable"; });
+          });
+        }).catch(function (e) {
+          if (e && e.status === 401) { showStep(2); keyErr.textContent = e.message; }
+          else { showStep(3); mindsBox.innerHTML = ""; mindsErr.textContent = e.message || "Could not load your Minds."; }
+        });
+      }
+
+      /* ---- Step 3.5: name your dashboard (slug claim — Q1) ---- */
+      var claimMindRef = null, availTimer = null, availSeq = 0;
+      var slugInput = $("byod-slug"), slugStatus = $("byod-slug-status"), claimErr = $("byod-claim-err");
+
+      function hsGrade() {
+        var c = hsEl ? hsEl.className : "";
+        if (c.indexOf("pass") !== -1) return "PASS";
+        if (c.indexOf("soft") !== -1) return "SOFT-PASS";
+        return "PENDING";
+      }
+      function syncConsentSlug() {
+        $("byod-consent-slug").textContent = "/d/" + (slugInput.value.trim() || "…");
+      }
+      // availability probe: public snapshot.json 404s for free slugs (a private
+      // claimed slug also 404s — the claim itself is the authority)
+      function checkAvail() {
+        var s = slugInput.value.trim();
+        slugStatus.className = "byod-slug-status";
+        if (!s) { slugStatus.textContent = ""; return; }
+        if (!validSlug(s)) { slugStatus.className = "byod-slug-status bad"; slugStatus.textContent = ERR_TEXT.bad_slug; return; }
+        slugStatus.textContent = "checking availability…";
+        var seq = ++availSeq;
+        fetch(BASE + "/d/" + s + "/snapshot.json", { credentials: "omit", cache: "no-store" }).then(function (r) {
+          if (seq !== availSeq) return;
+          if (r.status === 404) { slugStatus.className = "byod-slug-status ok"; slugStatus.textContent = "✓ looks available — claiming confirms it"; }
+          else if (r.ok) { slugStatus.className = "byod-slug-status bad"; slugStatus.textContent = ERR_TEXT.slug_taken; }
+          else { slugStatus.textContent = "couldn't check — claiming will tell you"; }
+        }).catch(function () {
+          if (seq === availSeq) slugStatus.textContent = "couldn't check — claiming will tell you";
+        });
+      }
+      slugInput.addEventListener("input", function () {
+        claimErr.textContent = "";
+        syncConsentSlug();
+        if (availTimer) clearTimeout(availTimer);
+        availTimer = setTimeout(checkAvail, 450);
+      });
+
+      function showClaimStep(mind) {
+        claimMindRef = mind;
+        slugInput.value = slugify((mind && mind.name) || "my-dashboard");
+        $("byod-consent").checked = false; // RT-4: publishing is opt-in, always unchecked by default
+        $("byod-consent-mind").textContent = (mind && mind.name) || "my Mind";
+        claimErr.textContent = "";
+        syncConsentSlug();
+        checkAvail();
+        showStep(35);
+      }
+
+      $("byod-skip-claim").addEventListener("click", function () {
+        closeWizard();
+        var m = claimMindRef || getMind() || {};
+        toast("This is YOUR dashboard, powered by " + (m.name || "your Mind") + ". Your key stays in this browser only.");
+      });
+
+      $("byod-claim").addEventListener("click", function () {
+        var m = claimMindRef || getMind();
+        if (!m) { claimErr.textContent = "Attach a Mind first."; return; }
+        var s = slugInput.value.trim();
+        if (!validSlug(s)) { claimErr.textContent = ERR_TEXT.bad_slug; return; }
+        var consent = $("byod-consent").checked;
+        var title = String((inst && inst.canvas && inst.canvas.titleEl.textContent) || "My Dashboard").slice(0, 80);
+        var btn = $("byod-claim");
+        btn.disabled = true; btn.textContent = "Claiming…";
+        claimErr.textContent = "";
+        relayJson("claim", {
+          slug: s, mindId: m.mindId, title: title, mindName: m.name || "",
+          handshakeGrade: hsGrade(), publicToggle: consent, consent: consent
+        }).then(function (d) {
+          setClaim({ slug: d.slug, publicToggle: !!d.publicToggle, mindId: m.mindId,
+                     title: title, mindName: m.name || "" });
+          closeWizard();
+          updateShareUi();
+          toast(d.existing
+            ? "You already had a link — restored /d/" + d.slug + "."
+            : "Claimed! Your dashboard now lives at " + dashUrl(d.slug) + (d.publicToggle ? " — public replay is ON." : "."));
+          if (d.publicToggle) pushSnapshot(true);
+        }).catch(function (e) {
+          if (e && e.status === 401) onAuthError();
+          claimErr.textContent = (e && e.message) || "Claim failed — try again.";
+        }).finally(function () { btn.disabled = false; btn.textContent = "Claim my link"; });
+      });
+
+      /* ---- Q2: share controls + public-replay snapshot client ---- */
+      var pubBanner = null, claimLinkBtn = null, pubBtn = null, copyBtn = null, clearReplayBtn = null;
+      var snapChipEl = null, snapChipTimer = null;
+      var snapOkAt = 0, snapDebounce = null, lastSnapPushAt = 0, snapLastMindKey = "";
+
+      function consentConfirmText(slug, mindName) {
+        return "Publish a public replay of this dashboard?\n\nAnyone with the link /d/" + slug +
+          " can see your canvas and a replay of your chat with " + mindName +
+          " — including everything you type here while public is on. Your Cognition balance and your key are never shown." +
+          " You can switch this off or delete the replay at any time.";
+      }
+
+      function updateShareUi() {
+        var c = getClaim();
+        if (pubBanner) pubBanner.hidden = !(c && c.publicToggle);
+        if (claimLinkBtn) claimLinkBtn.hidden = !!c;
+        if (pubBtn) { pubBtn.hidden = !c; pubBtn.textContent = (c && c.publicToggle) ? "Public replay: ON" : "Private"; }
+        if (copyBtn) copyBtn.hidden = !(c && c.publicToggle);
+        if (clearReplayBtn) clearReplayBtn.hidden = !c;
+        if (snapChipEl) snapChipEl.hidden = !(c && c.publicToggle);
+      }
+
+      function togglePublic() {
+        var c = getClaim();
+        if (!c) return;
+        if (!c.publicToggle) {
+          var m = getMind() || {};
+          if (!window.confirm(consentConfirmText(c.slug, m.name || "your Mind") + "\n\nPublish replay?")) return;
+          dPost(c.slug + "/visibility", { publicToggle: true, consent: true }).then(function (r) {
+            if (r.status === 401 || r.status === 403) { onAuthError(); return; }
+            if (!r.ok) { toast("Couldn't publish — try again in a moment."); return; }
+            c.publicToggle = true; setClaim(c); updateShareUi();
+            pushSnapshot(true);
+          }).catch(function () { toast("Couldn't publish — try again in a moment."); });
+        } else {
+          dPost(c.slug + "/visibility", { publicToggle: false }).then(function (r) {
+            if (r.status === 401 || r.status === 403) { onAuthError(); return; }
+            if (!r.ok) { toast("Couldn't switch to private — try again in a moment."); return; }
+            c.publicToggle = false; setClaim(c); updateShareUi();
+            toast("Replay is now private. The last snapshot is kept — use 'Clear public replay' to delete it.");
+          }).catch(function () { toast("Couldn't switch to private — try again in a moment."); });
+        }
+      }
+      function copyShareLink() {
+        var c = getClaim();
+        if (!c) return;
+        var url = dashUrl(c.slug);
+        var done = function () { toast("Link copied. Visitors see a replay — they can't chat or spend your Cognition."); };
+        try {
+          navigator.clipboard.writeText(url).then(done, function () { window.prompt("Copy your link:", url); });
+        } catch (e) { window.prompt("Copy your link:", url); }
+      }
+      function clearReplay() {
+        var c = getClaim();
+        if (!c) return;
+        if (!window.confirm("Delete the public replay? Your dashboard stays claimed; visitors will see 'nothing published yet' until you chat again. Public copies clear within a minute.")) return;
+        dPost(c.slug + "/clear", {}).then(function (r) {
+          if (r.status === 401 || r.status === 403) { onAuthError(); return; }
+          if (!r.ok) { toast("Couldn't clear the replay — try again in a moment."); return; }
+          snapOkAt = 0; snapLastMindKey = ""; lastSnapPushAt = 0;
+          setSnapChip("cleared");
+          toast("Public replay deleted. Your link and dashboard are unchanged.");
+        }).catch(function () { toast("Couldn't clear the replay — try again in a moment."); });
+      }
+
+      function setSnapChip(state) {
+        if (!snapChipEl) return;
+        snapChipEl.className = "snapchip" + (state === "err" || state === "paused" ? " warn" : "");
+        if (state === "ok") { snapOkAt = Date.now(); snapChipEl.textContent = "Replay updated just now"; }
+        else if (state === "err") snapChipEl.textContent = "⚠ Replay not updating";
+        else if (state === "paused") snapChipEl.textContent = "Replay paused (daily limit) — your dashboard still works";
+        else if (state === "cleared") snapChipEl.textContent = "Replay cleared";
+        else snapChipEl.textContent = "";
+      }
+      function tickSnapChip() {
+        if (!snapChipEl || !snapOkAt) return;
+        if (snapChipEl.className.indexOf("warn") !== -1) return;
+        var m = Math.round((Date.now() - snapOkAt) / 60000);
+        snapChipEl.textContent = m < 1 ? "Replay updated just now" : "Replay updated " + m + "m ago";
+      }
+
+      function stripToText(html) {
+        var tpl = document.createElement("template");
+        tpl.innerHTML = String(html || "");
+        return (tpl.content.textContent || "").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "").trim();
+      }
+      // Sanitized transcript: both parties (replays of answers without questions
+      // are gibberish), plain text only, markers stripped, JWT-shaped strings
+      // dropped, balance never present (it is never part of the message list).
+      function collectTranscript() {
+        var msgs = (inst && inst.chat) ? (inst.chat.messages() || []).slice() : [];
+        msgs.sort(function (a, b) { return String(a.createdAt || "").localeCompare(String(b.createdAt || "")); });
+        var out = [];
+        for (var i = 0; i < msgs.length; i++) {
+          var m = msgs[i];
+          if (!m) continue;
+          var text = String(m.messageText || "");
+          if (m.partyType === 0) {
+            var ex = null;
+            try { ex = extractCanvas(text, true); } catch (e) {}
+            if (ex && ex.fragment) text = String(ex.chatHtml || "");
+            text = text.replace(/\[\[TAB-TITLE\]\][\s\S]{0,220}?\[\[\\?\/TAB-TITLE\]\]/g, " ");
+          }
+          text = stripToText(text);
+          if (!text) continue;
+          if (JWT_SHAPE_RE.test(text)) continue;
+          out.push({ party: m.partyType === 0 ? "mind" : "owner",
+                     text: text.slice(0, 4096),
+                     at: m.createdAt || new Date().toISOString() });
+        }
+        return out.slice(-50);
+      }
+      // Called on every history batch: a NEW Mind reply schedules a push
+      // (debounce 8s, floor 30s between pushes — D13).
+      function maybeSnapshot(msgs) {
+        var c = getClaim();
+        if (!c || !c.publicToggle) return;
+        var newest = "";
+        for (var i = 0; i < (msgs || []).length; i++) {
+          var m = msgs[i];
+          if (m && m.partyType === 0 && String(m.createdAt || "") > newest) newest = String(m.createdAt);
+        }
+        if (!newest || newest === snapLastMindKey) return;
+        snapLastMindKey = newest;
+        scheduleSnap();
+      }
+      function scheduleSnap() {
+        if (snapDebounce) clearTimeout(snapDebounce);
+        var wait = Math.max(8000, 30000 - (Date.now() - lastSnapPushAt));
+        snapDebounce = setTimeout(function () { snapDebounce = null; pushSnapshot(false); }, wait);
+      }
+      function pushSnapshot(immediate) {
+        var c = getClaim();
+        if (!c || !c.publicToggle || !inst) return;
+        if (!immediate && Date.now() - lastSnapPushAt < 30000) { scheduleSnap(); return; }
+        var frag = null;
+        try {
+          var frame = inst.stageEl && inst.stageEl.querySelector("iframe.canvas-frame");
+          if (frame && frame.srcdoc) {
+            var sd = String(frame.srcdoc);
+            frag = sd.indexOf(SRCDOC_HEAD) === 0 ? sd.slice(SRCDOC_HEAD.length) : sd;
+            frag = scrubFragment(frag); // client scrub — the worker re-scrubs (defense in depth)
+            // E2d: key-shaped text echoed into a canvas build never leaves the browser
+            if (frag && JWT_SHAPE_RE.test(frag)) frag = null;
+          }
+        } catch (e) { frag = null; }
+        var body = {
+          capturedAt: new Date().toISOString(),
+          canvas: (frag && frag.trim()) ? frag : null,
+          canvasTitle: String((inst.canvas && inst.canvas.titleEl.textContent) || "").slice(0, 48),
+          transcript: collectTranscript(),
+          mindName: String((getMind() || {}).name || "").slice(0, 80)
+        };
+        lastSnapPushAt = Date.now();
+        dPost(c.slug + "/snapshot", body).then(function (r) {
+          if (r.ok) { setSnapChip("ok"); return; }
+          if (r.status === 401 || r.status === 403) { setSnapChip("err"); return; }
+          return r.json().catch(function () { return {}; }).then(function (d) {
+            var code = d && d.error;
+            if (code === "replay_private") { c.publicToggle = false; setClaim(c); updateShareUi(); }
+            else if (code === "replay_paused") setSnapChip("paused");
+            else if (code === "stale_capture") { /* another tab already pushed newer — benign */ }
+            else if (r.status === 429) { /* min-interval race — next reply retries */ }
+            else setSnapChip("err");
+          });
+        }).catch(function () { setSnapChip("err"); });
+      }
+
+      /* ---- attached instance ("My Dashboard" tab) ---- */
+      var inst = null, tabAdded = false;
+      var balEl = null, hsEl = null, retestBtn = null;
+      var hsTimer = null;
+      var hsProbeStarted = false; // true once runHandshake() has sent a probe
+
+      function ensureTab() {
+        if (!tabAdded) { Tabs.addLocal({ alias: "byod", title: "My Dashboard", kind: "byod" }); tabAdded = true; }
+      }
+      function teardown() {
+        if (hsTimer) { clearInterval(hsTimer); hsTimer = null; }
+        if (snapDebounce) { clearTimeout(snapDebounce); snapDebounce = null; }
+        if (snapChipTimer) { clearInterval(snapChipTimer); snapChipTimer = null; }
+        Tabs.removeLocal("byod");
+        inst = null; tabAdded = false; balEl = null; hsEl = null; retestBtn = null;
+        pubBanner = null; claimLinkBtn = null; pubBtn = null; copyBtn = null;
+        clearReplayBtn = null; snapChipEl = null;
+        snapOkAt = 0; snapLastMindKey = ""; lastSnapPushAt = 0;
+      }
+
+      function toast(msg) {
+        var t = $("byod-toast");
+        t.textContent = msg;
+        t.hidden = false;
+        setTimeout(function () { t.hidden = true; }, 8000);
+      }
+
+      var authErrShown = false;
+      function onAuthError() {
+        if (authErrShown) return;
+        authErrShown = true;
+        if (inst && inst.chat) inst.chat.stop();
+        showStep(2);
+        keyErr.textContent = "Your key was rejected or has expired — paste a fresh key to continue.";
+        setTimeout(function () { authErrShown = false; }, 5000);
+      }
+
+      var lastBalAt = 0;
+      function refreshBalance() {
+        var m = getMind();
+        if (!m || !balEl || Date.now() - lastBalAt < 15000) return;
+        lastBalAt = Date.now();
+        relayJson("balance", { mindId: m.mindId }).then(function (b) {
+          balEl.textContent = (b && b.balance != null) ? (Math.round(b.balance * 100) / 100) + " cognition" : "balance —";
+        }).catch(function () {});
+      }
+
+      /* ---- canvas handshake (advisory, never blocking) ---- */
+      function setHs(state) {
+        if (!hsEl) return;
+        hsEl.className = "hs " + state;
+        if (state === "checking") { hsEl.textContent = "testing canvas…"; retestBtn.hidden = true; }
+        else if (state === "pass") { hsEl.textContent = "✓ canvas render-capable"; retestBtn.hidden = true; if (hsTimer) { clearInterval(hsTimer); hsTimer = null; } }
+        else { // soft-fail — advisory only
+          hsEl.textContent = "⚠ text-cards only — tip: ask your Mind to equip the GIS Companion skill, then Re-test";
+          retestBtn.hidden = false;
+        }
+      }
+      function scanHandshake(msgs) {
+        if (!hsEl || hsEl.className.indexOf("pass") !== -1) return;
+        for (var i = 0; i < (msgs || []).length; i++) {
+          var m = msgs[i];
+          if (m && m.partyType === 0 && /Canvas ready/i.test(String(m.messageText || ""))) { setHs("pass"); return; }
+        }
+      }
+      function runHandshake() {
+        var m = getMind();
+        if (!m) return;
+        hsProbeStarted = true;
+        setHs("checking");
+        if (hsTimer) { clearInterval(hsTimer); hsTimer = null; }
+        relay("send", { mindId: m.mindId, messageText: PROBE_TEXT }).then(function (r) {
+          if (r.status === 401) { onAuthError(); setHs("soft"); return; }
+          if (!r.ok) { setHs("soft"); return; }
+          pushSent(m.mindId, PROBE_TEXT);
+          if (inst && inst.chat && inst.chat.isRunning()) inst.chat.fetchNow(true);
+          var tries = 0;
+          hsTimer = setInterval(function () {
+            tries++;
+            relayJson("history", { mindId: m.mindId }).then(function (d) {
+              var msgs = (d && d.messages) || [];
+              var ok = msgs.some(function (mm) { return /Canvas ready/i.test(String(mm.messageText || "")); });
+              if (ok) setHs("pass");
+              else if (tries >= 10) { setHs("soft"); clearInterval(hsTimer); hsTimer = null; }
+            }).catch(function () {
+              if (tries >= 10) { setHs("soft"); clearInterval(hsTimer); hsTimer = null; }
+            });
+          }, 6000);
+        }).catch(function () { setHs("soft"); });
+      }
+
+      /* ---- owner chrome ---- */
+      function buildOwnerBar(mind) {
+        var bar = el("div", "byod-ownerbar");
+        var name = el("span", "mname");
+        name.appendChild(el("strong", null, mind.name || "Your Mind"));
+        balEl = el("span", "num", "balance —");
+        hsEl = el("span", "hs checking", "testing canvas…");
+        retestBtn = el("button", null, "Re-test");
+        retestBtn.type = "button"; retestBtn.hidden = true;
+        retestBtn.addEventListener("click", runHandshake);
+        // share controls (Q1/Q2) — visibility driven by updateShareUi()
+        claimLinkBtn = el("button", null, "Claim your link");
+        claimLinkBtn.type = "button";
+        claimLinkBtn.addEventListener("click", function () { showClaimStep(getMind() || mind); });
+        pubBtn = el("button", null, "Private");
+        pubBtn.type = "button";
+        pubBtn.addEventListener("click", togglePublic);
+        copyBtn = el("button", null, "Copy link");
+        copyBtn.type = "button";
+        copyBtn.addEventListener("click", copyShareLink);
+        clearReplayBtn = el("button", null, "Clear public replay");
+        clearReplayBtn.type = "button";
+        clearReplayBtn.addEventListener("click", clearReplay);
+        snapChipEl = el("span", "snapchip", "");
+        pubBanner = el("div", "byod-publicbanner", "🔴 PUBLIC — your chats are being replayed");
+        pubBanner.hidden = true;
+        if (snapChipTimer) clearInterval(snapChipTimer);
+        snapChipTimer = setInterval(tickSnapChip, 30000);
+        var spacer = el("span", "spacer");
+        var replaceBtn = el("button", null, "Replace Mind");
+        replaceBtn.type = "button";
+        replaceBtn.addEventListener("click", function () { loadMinds(); });
+        var logoutBtn = el("button", null, "Log out");
+        logoutBtn.type = "button";
+        logoutBtn.addEventListener("click", function () {
+          clearAll();
+          authErrShown = false;
+          if (keyErr) keyErr.textContent = ""; // no stale "rejected" message on next wizard open
+          teardown();
+          toast("Signed out. Your key was never stored on our servers and has been removed from this browser. To be certain, you can also revoke it in your Builder console.");
+        });
+        bar.appendChild(name); bar.appendChild(balEl); bar.appendChild(hsEl); bar.appendChild(retestBtn);
+        bar.appendChild(claimLinkBtn); bar.appendChild(pubBtn); bar.appendChild(copyBtn);
+        bar.appendChild(clearReplayBtn); bar.appendChild(snapChipEl);
+        bar.appendChild(spacer); bar.appendChild(replaceBtn); bar.appendChild(logoutBtn);
+        updateShareUi();
+        return bar;
+      }
+
+      // Called by Tabs.instantiate for kind "byod"
+      function buildInstance() {
+        var mind = getMind() || { mindId: "", name: "Your Mind" };
+        var canvas = makeCanvas("byod", mind.name || "Your Mind");
+        canvas.stage.insertBefore(buildOwnerBar(mind), canvas.stage.firstChild);
+        if (pubBanner) canvas.stage.insertBefore(pubBanner, canvas.stage.firstChild); // persistent while public (E2b)
+        document.body.insertBefore(canvas.stage, $("chatcol"));
+        var chat = makeChat({
+          alias: "byod",
+          mount: $("chatcol"),
+          who: mind.name || "Your Mind",
+          chips: BYOD_CHIPS,
+          transport: {
+            history: function () {
+              refreshBalance();
+              return relay("history", { mindId: mind.mindId }).then(function (r) {
+                if (r.status === 401) { onAuthError(); throw new Error("auth"); }
+                if (!r.ok) throw new Error("history failed");
+                return r.json();
+              }).then(function (d) {
+                // relay returns Mind messages only — merge the owner's own
+                // messages (client-side, zero custody); makeChat sorts by createdAt
+                var minds = ((d && d.messages) || []).map(function (mm) {
+                  var t = String(mm.messageText || "");
+                  // strip [[TAB-TITLE]] markers (tolerate escaped closing slash);
+                  // apply the newest one to the dashboard heading
+                  var tm = t.match(/\[\[TAB-TITLE\]\]([\s\S]{1,200}?)\[\[\\?\/TAB-TITLE\]\]/);
+                  if (tm) {
+                    t = t.replace(tm[0], "").trim();
+                    var clean = tm[1].replace(/<[^>]*>/g, "").trim().slice(0, 48);
+                    if (clean && canvas.titleEl) canvas.titleEl.textContent = clean;
+                    return Object.assign({}, mm, { messageText: t });
+                  }
+                  return mm;
+                });
+                return minds.concat(sentList(mind.mindId));
+              });
+            },
+            send: function (text) {
+              return relay("send", { mindId: mind.mindId, messageText: text }).then(function (r) {
+                if (r.ok) pushSent(mind.mindId, text);
+                if (r.status === 401) onAuthError();
+                return r; // Response-shaped: makeChat reads .ok/.status/.json()
+              });
+            }
+          },
+          onMessages: function (msgs) {
+            canvas.onMessages(msgs, chat && chat.wasBuildish());
+            scanHandshake(msgs);
+            maybeSnapshot(msgs);
+          },
+          onSend: function () { canvas.onSend(); }
+        });
+        inst = { alias: "byod", kind: "byod", chat: chat, canvas: canvas, stageEl: canvas.stage, lastSeenMindAt: "" };
+        // Restored sessions (page reload with persisted key+mind) never call
+        // runHandshake(); scanHandshake() on the first history batches can
+        // still flip to "pass", but if no probe starts and no "Canvas ready"
+        // arrives, fall to soft so Re-test is visible instead of spinning.
+        setTimeout(function () {
+          if (!hsProbeStarted && hsEl && hsEl.className.indexOf("checking") !== -1) setHs("soft");
+        }, 15000);
+        return inst;
+      }
+
+      /* ---- attach / entry points ---- */
+      function attach(mind) {
+        if (inst && !window.confirm("Replace the attached Mind? A new Mind starts a fresh conversation on this dashboard.")) return;
+        setMind({ mindId: mind.mindId, name: mind.name || mind.mindId });
+        if (inst || tabAdded) teardown();
+        ensureTab();
+        Tabs.activate("byod");
+        runHandshake();
+        if (!getClaim()) {
+          // Step 3.5: name the dashboard (Q1). Skipping still leaves a working
+          // dashboard; claiming later via the ownerbar's "Claim your link".
+          showClaimStep(mind);
+        } else {
+          closeWizard();
+          toast("This is YOUR dashboard, powered by " + (mind.name || "your Mind") + ". Your key stays in this browser only.");
+        }
+      }
+
+      $("byod-cta").addEventListener("click", function () {
+        if (getKey() && getMind()) { ensureTab(); Tabs.activate("byod"); return; }
+        if (getKey()) { showStep(2); loadMinds(); return; }
+        showStep(1);
+      });
+
+      // Restore an attached session on load (key + mind already in storage).
+      if (getKey() && getMind()) ensureTab();
+      // Q1 background sync: refresh the claimed-slug config from the worker on
+      // load (multiple browsers, same owner; publicToggle changed elsewhere).
+      if (getKey()) {
+        whoami().then(function (d) {
+          if (d && d.claimed) {
+            setClaim({ slug: d.slug, publicToggle: !!d.publicToggle, mindId: d.mindId,
+                       title: d.title || "My Dashboard", mindName: d.mindName || "" });
+            if (!getMind()) setMind({ mindId: d.mindId, name: d.mindName || d.mindId });
+            ensureTab();
+          } else if (d && d.ok && !d.claimed) {
+            clearClaim();
+          }
+          updateShareUi();
+        }).catch(function () { /* offline or 401 — existing auth flows handle it */ });
+      }
+
+      return { buildInstance: buildInstance };
+    })();
+
+    /* ================= Fallback snapshot ================= */
+    var FALLBACK = {
+      fetchedAt: null,
+      timings: { rainfallMs: 180, weatherMs: 220 },
+      weather: {
+        updateTime: null,
+        temperature: { data: [
+          { place: "Happy Valley", value: 32, unit: "C" },
+          { place: "Hong Kong Observatory", value: 31, unit: "C" },
+          { place: "Sha Tin", value: 31, unit: "C" },
+          { place: "Kowloon City", value: 31, unit: "C" },
+          { place: "Chek Lap Kok", value: 32, unit: "C" },
+          { place: "Tuen Mun", value: 30, unit: "C" },
+          { place: "Sai Kung", value: 29, unit: "C" },
+          { place: "Ta Kwu Ling", value: 29, unit: "C" },
+          { place: "Waglan Island", value: 28, unit: "C" },
+          { place: "Cheung Chau", value: 28, unit: "C" }
+        ] }
+      },
+      rainfallRows: [
+        { place: "Sai Kung", v: 4.5 }, { place: "Sha Tin", v: 2.0 },
+        { place: "Tai Po", v: 1.5 }, { place: "Eastern District", v: 1.0 },
+        { place: "Kwun Tong", v: 0.5 }, { place: "Central & Western District", v: 0 },
+        { place: "Yuen Long", v: 0 }, { place: "Tuen Mun", v: 0 }
+      ],
+      isFallback: true
+    };
+
+    /* ================= Data module (Tab 1 — unchanged behavior) ================= */
+    var Data = (function () {
+      var REFRESH_MS = 60000;
+      var state = "loading";
+      var lastGood = null;
+      var lastFetchAt = 0;
+      var roundTripMs = null;
+      var failCount = 0;
+      var usingFallback = false;
+      var inFlight = false;
+      var refreshTimer = null, tickTimer = null, quickRetryTimer = null;
+      var nextRefreshAt = Date.now() + REFRESH_MS;
+
+      function parsePayload(d) {
+        d = d || {};
+        var w = d.weather || {};
+        var temps = (((w.temperature) || {}).data || [])
+          .map(function (t) { return { place: String(t.place || ""), v: Number(t.value) }; })
+          .filter(function (t) { return t.place && isFinite(t.v); });
+
+        var rainRows = [];
+        try {
+          var wr = ((w.rainfall || {}).data) || [];
+          if (Array.isArray(wr) && wr.length) {
+            rainRows = wr.map(function (r) {
+              var v = Number(r.max != null ? r.max : r.value);
+              return { place: String(r.place || r.district || ""), v: v };
+            });
+          } else {
+            var hr = ((d.rainfall || {}).hourlyRainfall) || [];
+            if (Array.isArray(hr)) {
+              rainRows = hr.map(function (r) {
+                return { place: String(r.automaticWeatherStation || r.place || ""), v: Number(r.value) };
+              });
+            }
+          }
+        } catch (e) { rainRows = []; }
+        rainRows = rainRows.filter(function (r) { return r.place && isFinite(r.v); });
+
+        var timings = d.timings || {};
+        return {
+          temps: temps,
+          rain: rainRows,
+          weatherMs: isFinite(Number(timings.weatherMs)) ? Number(timings.weatherMs) : null,
+          rainfallMs: isFinite(Number(timings.rainfallMs)) ? Number(timings.rainfallMs) : null,
+          updateTime: w.updateTime || null,
+          fetchedAt: d.fetchedAt || null,
+          isFallback: !!d.isFallback
+        };
+      }
+
+      function fetchData(manual) {
+        if (inFlight) return false;
+        inFlight = true;
+        setPillBusy(true);
+        var t0 = performance.now();
+        fetch(BASE + "/data", { method: "GET", headers: { "Accept": "application/json" }, credentials: "omit", cache: "no-store" })
+          .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+          .then(function (d) {
+            roundTripMs = Math.round(performance.now() - t0);
+            var prev = lastGood;
+            lastGood = parsePayload(d);
+            lastFetchAt = Date.now();
+            failCount = 0;
+            usingFallback = false;
+            state = "live";
+            $("fallback-banner").hidden = true;
+            Render.all(lastGood, prev, roundTripMs, lastFetchAt, state, remainSecs());
+          })
+          .catch(function (err) {
+            failCount++;
+            if (lastGood && !usingFallback) {
+              state = "stale";
+              var bn = $("fallback-banner");
+              bn.textContent = "Showing data cached " + fmtClock(lastFetchAt) + " — reconnecting…";
+              bn.hidden = false;
+              Render.all(lastGood, null, roundTripMs, lastFetchAt, state, remainSecs());
+            } else if (!lastGood) {
+              if (failCount >= 2) {
+                usingFallback = true;
+                state = "sample";
+                lastGood = parsePayload(FALLBACK);
+                lastGood.rain = FALLBACK.rainfallRows.slice();
+                lastFetchAt = Date.now();
+                var b = $("fallback-banner");
+                b.textContent = "SAMPLE SNAPSHOT — live feed unavailable, retrying automatically";
+                b.hidden = false;
+                Render.all(lastGood, null, null, lastFetchAt, state, remainSecs());
+              } else {
+                state = "error";
+                Render.errorState(failCount);
+              }
+            } else {
+              state = "sample";
+            }
+          })
+          .finally(function () {
+            inFlight = false;
+            setPillBusy(false);
+            updatePill();
+            if (failCount === 1 && !lastGood) {
+              nextRefreshAt = Date.now() + 10000;
+              if (quickRetryTimer) clearTimeout(quickRetryTimer);
+              quickRetryTimer = setTimeout(function () { quickRetryTimer = null; fetchData(false); }, 10000);
+            }
+          });
+        updatePill();
+        return true;
+      }
+
+      function remainSecs() {
+        return Math.max(0, Math.round((nextRefreshAt - Date.now()) / 1000));
+      }
+      function fmtClock(ms) {
+        try { return new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); } catch (e) { return "—"; }
+      }
+      function setPillBusy(busy) {
+        var dot = document.querySelector("#pill .dot");
+        if (dot && !reducedMotion) dot.classList.toggle("busy", busy);
+      }
+      function updatePill() {
+        var pill = $("pill"), txt = $("pill-text");
+        pill.className = "pill";
+        if (state === "live") { pill.classList.add("live"); txt.textContent = "LIVE"; }
+        else if (state === "stale") { pill.classList.add("stale"); txt.textContent = "STALE"; }
+        else if (state === "sample") { pill.classList.add("sample"); txt.textContent = "SAMPLE"; }
+        else if (state === "error") { pill.classList.add("offline"); txt.textContent = "OFFLINE"; }
+        else { pill.classList.add("connecting"); txt.textContent = "CONNECTING"; }
+      }
+      function tick() {
+        var now = Date.now();
+        var remain = remainSecs();
+        $("next-refresh").textContent = "refresh in " + remain + "s";
+        if (lastFetchAt) {
+          var ago = Math.round((now - lastFetchAt) / 1000);
+          $("fetched-ago").textContent = "fetched " + (ago < 60 ? ago + "s" : Math.round(ago / 60) + "m") + " ago";
+        }
+        if (lastGood) Render.freshLine(lastGood, lastFetchAt, remain, state);
+      }
+      function schedule() {
+        if (refreshTimer) clearInterval(refreshTimer);
+        nextRefreshAt = Date.now() + REFRESH_MS;
+        refreshTimer = setInterval(function () {
+          nextRefreshAt = Date.now() + REFRESH_MS;
+          fetchData(false);
+        }, REFRESH_MS);
+      }
+      function startTick() {
+        if (tickTimer) clearInterval(tickTimer);
+        tickTimer = setInterval(tick, 1000);
+      }
+      function stopAll() {
+        if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+        if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
+        if (quickRetryTimer) { clearTimeout(quickRetryTimer); quickRetryTimer = null; }
+      }
+
+      $("refresh-now").addEventListener("click", function () {
+        if (fetchData(true)) schedule();
+      });
+
+      document.addEventListener("visibilitychange", function () {
+        if (document.hidden) { stopAll(); Tabs.pause(); }
+        else {
+          fetchData(false); schedule(); startTick();
+          Tabs.resume();
+        }
+      });
+      window.addEventListener("beforeunload", stopAll);
+
+      fetchData(false);
+      schedule();
+      startTick();
+      tick();
+
+      return {
+        rerender: function () {
+          if (lastGood) {
+            try { Render.all(lastGood, null, roundTripMs, lastFetchAt, state, remainSecs()); } catch (e) {}
+          }
+        }
+      };
+    })();
+
+    var resizeTimer = null;
+    window.addEventListener("resize", function () {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(function () { Data.rerender(); }, 200);
+    });
+
+    /* ================= Render module (Tab 1 — unchanged) ================= */
+    var Render = (function () {
+      function lerpColor(a, b, t) {
+        function hex(c) { return [parseInt(c.slice(1,3),16), parseInt(c.slice(3,5),16), parseInt(c.slice(5,7),16)]; }
+        var A = hex(a), B = hex(b);
+        var out = A.map(function (v, i) { return Math.round(v + (B[i]-v)*t); });
+        return "rgb(" + out.join(",") + ")";
+      }
+
+      function setTile(id, val, sub, prev) {
+        var tile = $(id);
+        var valEl = tile.querySelector(".val"), subEl = tile.querySelector(".subline");
+        valEl.classList.remove("skel");
+        var changed = valEl.textContent !== val;
+        function apply() { valEl.textContent = val; subEl.innerHTML = sub; }
+        if (changed && prev && !reducedMotion) {
+          valEl.classList.add("fading");
+          setTimeout(function () { apply(); valEl.classList.remove("fading"); }, 200);
+          tile.classList.add("flash");
+          setTimeout(function () { tile.classList.remove("flash"); }, 600);
+        } else apply();
+      }
+
+      function hbar(rows, opts) {
+        opts = opts || {};
+        var min = opts.min, max = opts.max;
+        if (max === min) max = min + 1;
+        var medFrac = null;
+        if (opts.median != null) medFrac = Math.max(0, Math.min(1, (opts.median - min) / (max - min)));
+        var out = ['<div class="hrows" role="img" aria-label="' + esc(opts.aria || "bar chart") + '">'];
+        for (var i = 0; i < rows.length; i++) {
+          if (opts.dividerIndex === i && opts.dividerText) {
+            out.push('<div class="hdiv">' + esc(opts.dividerText) + '</div>');
+          }
+          var r = rows[i];
+          var frac = Math.max(0.02, Math.min(1, (r.v - min) / (max - min)));
+          out.push('<div class="hrow"><span class="hlabel" title="' + esc(r.label) + '">' + esc(r.label) + '</span>' +
+            '<span class="htrack"><span class="hfill" style="width:' + (frac * 100).toFixed(1) + '%;background:' + r.color + '"></span>' +
+            (medFrac != null ? '<span class="hmed" style="left:' + (medFrac * 100).toFixed(1) + '%"></span>' : '') +
+            '</span><span class="hval num">' + esc(r.display) + '</span></div>');
+        }
+        out.push('</div>');
+        if (opts.medianLabel) out.push('<div class="chart-note">┄ ' + esc(opts.medianLabel) + '</div>');
+        return out.join("");
+      }
+
+      function fitRows(host, reserve) {
+        var h = host.clientHeight || 240;
+        return Math.max(4, Math.min(12, Math.floor((h - (reserve || 0)) / 20)));
+      }
+      function median(arr) {
+        if (!arr.length) return null;
+        var s = arr.slice().sort(function (a,b) { return a-b; });
+        var m = Math.floor(s.length / 2);
+        return s.length % 2 ? s[m] : (s[m-1]+s[m])/2;
+      }
+
+      function renderTiles(p, prev) {
+        var t = p.temps.slice().sort(function (a,b) { return b.v - a.v; });
+        var hot = t[0] || null, cool = t[t.length-1] || null;
+        setTile("tile-hot", hot ? hot.v.toFixed(0) + "°C" : "—", hot ? esc(hot.place) : "&nbsp;", prev);
+        setTile("tile-cool", cool ? cool.v.toFixed(0) + "°C" : "—", cool ? esc(cool.place) : "&nbsp;", prev);
+        setTile("tile-spread", (hot && cool) ? "Δ" + (hot.v - cool.v).toFixed(1) + "°C" : "—", "hottest − coolest", prev);
+        var r = p.rain.slice().sort(function (a,b) { return b.v - a.v; });
+        var wet = r[0] || null;
+        if (!wet) setTile("tile-rain", "—", "&nbsp;", prev);
+        else if (wet.v <= 0) setTile("tile-rain", "0 mm", "dry hour across HK", prev);
+        else setTile("tile-rain", wet.v.toFixed(1) + " mm", esc(wet.place), prev);
+      }
+
+      function renderTempChart(p) {
+        var host = $("temp-chart");
+        var t = p.temps.slice().sort(function (a,b) { return b.v - a.v; });
+        if (!t.length) { host.innerHTML = '<div class="chart-empty">No temperature readings available right now.</div>'; return; }
+        var fit = Math.min(12, fitRows(host, 22));
+        var nBottom = t.length > fit ? (fit >= 11 ? 3 : 2) : 0;
+        var nTop = Math.min(t.length - nBottom, Math.max(3, fit - nBottom - 1));
+        var top = t.slice(0, nTop);
+        var bottom = nBottom ? t.slice(-nBottom) : [];
+        var omitted = Math.max(0, t.length - top.length - bottom.length);
+        var min = t[t.length-1].v, max = t[0].v;
+        function color(v) { return lerpColor("#5cc8ff", "#ff8a5c", max === min ? 0.5 : (v - min)/(max - min)); }
+        var rows = top.concat(bottom).map(function (s) {
+          return { label: s.place, v: s.v, display: s.v.toFixed(1) + "°", color: color(s.v) };
+        });
+        var med = median(t.map(function (s) { return s.v; }));
+        host.innerHTML = hbar(rows, {
+          min: min - Math.max(1, (max - min) * 0.3), max: max,
+          dividerIndex: omitted > 0 ? top.length : -1,
+          dividerText: omitted > 0 ? "… " + omitted + " more stations" : null,
+          median: med, medianLabel: med != null ? "median " + med.toFixed(1) + "°C" : "",
+          aria: "Temperature by station, hottest to coolest"
+        });
+      }
+
+      function renderRainChart(p) {
+        var host = $("rain-chart");
+        var r = p.rain.slice().sort(function (a,b) { return b.v - a.v; });
+        if (!r.length) { host.innerHTML = '<div class="chart-empty">No rainfall readings available right now.</div>'; return; }
+        var maxV = r[0].v;
+        if (maxV <= 0) {
+          host.innerHTML = '<div class="chart-empty">No rain recorded in the past hour across all districts — a finding, not an error.</div>';
+          return;
+        }
+        var rows = r.slice(0, Math.min(8, fitRows(host, 0))).map(function (d) {
+          return { label: d.place, v: d.v, display: d.v.toFixed(1) + " mm", color: "#4fc3f7" };
+        });
+        host.innerHTML = hbar(rows, { min: 0, max: maxV, aria: "Rainfall by district, past hour" });
+      }
+
+      function renderInsights(p) {
+        var ul = $("insights-list");
+        var t = p.temps.slice().sort(function (a,b) { return b.v - a.v; });
+        var lines = [];
+        if (!t.length) {
+          ul.innerHTML = "<li>Waiting for observatory data…</li>";
+          return;
+        }
+        var hot = t[0], cool = t[t.length-1];
+        lines.push("Hottest right now: <strong>" + esc(hot.place) + "</strong> at " + hot.v.toFixed(1) + "°C; coolest: <strong>" + esc(cool.place) + "</strong> at " + cool.v.toFixed(1) + "°C — a spread of " + (hot.v - cool.v).toFixed(1) + "°C across Hong Kong.");
+        function find(names) {
+          for (var i = 0; i < names.length; i++) {
+            for (var j = 0; j < t.length; j++) if (t[j].place === names[i]) return t[j];
+          }
+          return null;
+        }
+        var urban = find(["Hong Kong Observatory", "Sha Tin", "Happy Valley", "Kowloon City"]);
+        var rural = find(["Ta Kwu Ling", "Waglan Island", "Tai Mei Tuk", "Cheung Chau"]);
+        if (!urban || !rural || urban.place === rural.place) { urban = hot; rural = cool; }
+        var d = urban.v - rural.v;
+        if (urban.place !== rural.place) {
+          lines.push("<strong>" + esc(urban.place) + "</strong> (urban) reads " + Math.abs(d).toFixed(1) + "°C " + (d >= 0 ? "above" : "below") + " <strong>" + esc(rural.place) + "</strong> (rural) — urban heat island effect?");
+        }
+        var mean = t.reduce(function (s, x) { return s + x.v; }, 0) / t.length;
+        lines.push("Mean of " + t.length + " stations: " + mean.toFixed(1) + "°C.");
+        var r = p.rain.slice().sort(function (a,b) { return b.v - a.v; });
+        if (r.length) {
+          if (r[0].v > 0) lines.push("<strong>" + esc(r[0].place) + "</strong> leads rainfall with " + r[0].v.toFixed(1) + " mm in the past hour.");
+          else lines.push("No rain recorded across all districts in the past hour — a dry hour.");
+        }
+        ul.innerHTML = lines.map(function (l) { return "<li>" + l + "</li>"; }).join("");
+      }
+
+      function renderPipeline(p, roundTripMs) {
+        var observed = [p.weatherMs, p.rainfallMs, roundTripMs].filter(function (v) { return v != null && isFinite(v); });
+        var maxObserved = observed.length ? Math.max.apply(null, observed) : 0;
+        var SCALE = Math.max(2000, Math.ceil((maxObserved * 1.2) / 500) * 500);
+        var tickPct = Math.min(95, (500 / SCALE) * 100).toFixed(1) + "%";
+        var ticks = document.querySelectorAll("#pipe-bars .tbar-tick");
+        for (var ti = 0; ti < ticks.length; ti++) ticks[ti].style.left = tickPct;
+        var track = document.querySelector("#pipe-bars .tbar-track");
+        if (track) track.title = "tick = 500 ms (fast) · scale 0–" + SCALE + " ms";
+        function bar(fillId, valId, ms) {
+          var fill = $(fillId), val = $(valId);
+          if (ms == null || !isFinite(ms)) { fill.style.width = "0"; val.textContent = "—"; return; }
+          fill.style.width = Math.min(100, (ms / SCALE) * 100).toFixed(1) + "%";
+          val.textContent = Math.round(ms) + " ms";
+        }
+        bar("bar-weather", "val-weather", p.weatherMs);
+        bar("bar-rain", "val-rain", p.rainfallMs);
+        bar("bar-rt", "val-rt", roundTripMs);
+        var line = $("pipe-line");
+        line.classList.remove("skel");
+        var total = (p.weatherMs || 0) + (p.rainfallMs || 0);
+        if (p.weatherMs != null || p.rainfallMs != null) {
+          if (total < 300) {
+            line.innerHTML = "The AI fetched 2 live datasets in <strong>" + Math.round(total) + " ms</strong> — faster than a blink (~300 ms).";
+          } else if (total < 1500) {
+            line.innerHTML = "The AI fetched 2 live datasets in <strong>" + Math.round(total) + " ms</strong> (a blink is ~300 ms).";
+          } else {
+            line.innerHTML = "Two live datasets fetched from the Observatory in about <strong>" + (total / 1000).toFixed(1) + " s</strong> — real-time data takes real time.";
+          }
+        } else {
+          line.textContent = "Pipeline timing unavailable for this snapshot.";
+        }
+      }
+
+      function freshLine(p, lastFetchAt, remainS, state) {
+        var e = $("pipe-fresh");
+        var isSample = state === "sample" || p.isFallback;
+        var hko = "—";
+        if (p.updateTime) {
+          var d = new Date(p.updateTime);
+          if (!isNaN(d.getTime())) hko = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        }
+        var parts = [];
+        if (isSample) parts.push("sample data (not live)");
+        parts.push("HKO updated " + hko);
+        if (!isSample && p.fetchedAt) {
+          var age = (Date.now() - new Date(p.fetchedAt).getTime()) / 1000;
+          if (isFinite(age) && age > 5) parts.push("served from 60s cache");
+          else parts.push("fresh fetch");
+        }
+        parts.push((isSample ? "next retry in " : "next refresh in ") + remainS + "s");
+        e.textContent = parts.join(" · ");
+        $("hko-updated").textContent = "HKO updated " + hko;
+      }
+
+      var hadRender = false;
+      function all(p, prev, roundTripMs, lastFetchAt, state, remainS) {
+        var wrap = function (fn) { try { fn(); } catch (e) { /* one bad section must not kill the rest */ } };
+        wrap(function () { renderTiles(p, hadRender ? (prev || p) : null); });
+        wrap(function () { renderTempChart(p); });
+        wrap(function () { renderRainChart(p); });
+        wrap(function () { renderInsights(p); });
+        wrap(function () { renderPipeline(p, roundTripMs); });
+        wrap(function () { freshLine(p, lastFetchAt, remainS != null ? remainS : 60, state); });
+        hadRender = true;
+      }
+
+      function errorState() {
+        ["tile-hot", "tile-cool", "tile-spread", "tile-rain"].forEach(function (id) {
+          var tile = $(id);
+          var valEl = tile.querySelector(".val"), subEl = tile.querySelector(".subline");
+          valEl.classList.remove("skel");
+          valEl.textContent = "—";
+          subEl.textContent = "connecting…";
+        });
+        $("temp-chart").innerHTML = '<div class="chart-empty">Connecting to Hong Kong Observatory… retrying shortly.</div>';
+        $("rain-chart").innerHTML = '<div class="chart-empty">Connecting to Hong Kong Observatory…</div>';
+        $("insights-list").innerHTML = "<li>Waiting for observatory data…</li>";
+        var line = $("pipe-line");
+        line.classList.remove("skel");
+        line.textContent = "Pipeline idle — waiting for the first successful data fetch. Retrying automatically.";
+        $("pipe-fresh").textContent = "no data yet";
+      }
+
+      return { all: all, errorState: errorState, freshLine: freshLine };
+    })();
+  })();
+  </script>
+</body>
+</html>

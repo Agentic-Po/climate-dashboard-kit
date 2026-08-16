@@ -1,0 +1,6 @@
+{
+  "name": "minds-chat-proxy",
+  "main": "worker.js",
+  "compatibility_date": "2026-06-01",
+  "kv_namespaces": [{ "binding": "CHAT_KV", "id": "5aef520f963c4e7f916b69cf8fb91008" }]
+}
